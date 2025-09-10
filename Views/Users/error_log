@@ -1,0 +1,49 @@
+[23-Oct-2024 21:53:07 America/New_York] PHP Warning:  include(/Config/Config.php): failed to open stream: No such file or directory in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:53:07 America/New_York] PHP Warning:  include(): Failed opening '/Config/Config.php' for inclusion (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:53:07 America/New_York] PHP Notice:  Undefined variable: conn in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:53:07 America/New_York] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php:21
+Stack trace:
+#0 {main}
+  thrown in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:55:24 America/New_York] PHP Warning:  include(/Config/Config.php): failed to open stream: No such file or directory in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:55:24 America/New_York] PHP Warning:  include(): Failed opening '/Config/Config.php' for inclusion (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:55:24 America/New_York] PHP Notice:  Undefined variable: conn in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:55:24 America/New_York] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php:21
+Stack trace:
+#0 {main}
+  thrown in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:09 America/New_York] PHP Warning:  include(/Config/Config.php): failed to open stream: No such file or directory in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:09 America/New_York] PHP Warning:  include(): Failed opening '/Config/Config.php' for inclusion (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:09 America/New_York] PHP Notice:  Undefined variable: conn in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:09 America/New_York] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php:21
+Stack trace:
+#0 {main}
+  thrown in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:11 America/New_York] PHP Warning:  include(/Config/Config.php): failed to open stream: No such file or directory in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:11 America/New_York] PHP Warning:  include(): Failed opening '/Config/Config.php' for inclusion (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:11 America/New_York] PHP Notice:  Undefined variable: conn in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:11 America/New_York] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php:21
+Stack trace:
+#0 {main}
+  thrown in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:11 America/New_York] PHP Warning:  include(/Config/Config.php): failed to open stream: No such file or directory in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:11 America/New_York] PHP Warning:  include(): Failed opening '/Config/Config.php' for inclusion (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:11 America/New_York] PHP Notice:  Undefined variable: conn in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:11 America/New_York] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php:21
+Stack trace:
+#0 {main}
+  thrown in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:11 America/New_York] PHP Warning:  include(/Config/Config.php): failed to open stream: No such file or directory in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:11 America/New_York] PHP Warning:  include(): Failed opening '/Config/Config.php' for inclusion (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:11 America/New_York] PHP Notice:  Undefined variable: conn in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:11 America/New_York] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php:21
+Stack trace:
+#0 {main}
+  thrown in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:12 America/New_York] PHP Warning:  include(/Config/Config.php): failed to open stream: No such file or directory in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:12 America/New_York] PHP Warning:  include(): Failed opening '/Config/Config.php' for inclusion (include_path='.:/opt/cpanel/ea-php74/root/usr/share/pear') in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 9
+[23-Oct-2024 21:57:12 America/New_York] PHP Notice:  Undefined variable: conn in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21
+[23-Oct-2024 21:57:12 America/New_York] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php:21
+Stack trace:
+#0 {main}
+  thrown in /home/mdyzuuzz/sistema.suportecnetwork.com/Views/Users/cambiar_contrasena.php on line 21

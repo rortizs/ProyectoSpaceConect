@@ -1,0 +1,30 @@
+<?php
+
+$serviceRegister = [
+    "BaseService",
+    "SendMail",
+    "SendWhatsapp",
+    "SendWhatsapp",
+    "InvoiceEmailService",
+    "BillInfoMessage",
+    "BillSendMessageWhatsapp",
+    "PendingSendMessageWhatsapp",
+    "Mikrotik",
+    "ClientSwitchMikrotikService",
+    "ContractChangePlanService",
+    "CustomerAssignSimpleQueue",
+    "CustomerAssignPppSecret",
+    "ContractActiveService",
+    "ClientSuspendService",
+    "ClientActivedService",
+    "ClientSuspendMassiveService",
+    "ClientUpdateMikrotikService",
+    "PaymentBillService",
+    "PaymentBillMassiveService",
+    "ClientRouterService",
+    "BillGenerate",
+    "BillInfoService",
+    "PlanillaWspSaveService",
+    "PlantillaWspInfoService",
+    "BackupDBService"
+];

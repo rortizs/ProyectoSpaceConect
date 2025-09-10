@@ -1,0 +1,12 @@
+Options All -Indexes
+RewriteEngine on
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
+RewriteEngine On
+RewriteCond %{HTTP_HOST} ^tudominio\.com$ [OR]
+RewriteCond %{HTTP_HOST} ^www\.online\.test$
+RewriteCond %{HTTPS} !on
+RewriteRule ^(.*)$ https://online.test/$1 [R=301,L,NE]
+php_flag display_errors off
+
