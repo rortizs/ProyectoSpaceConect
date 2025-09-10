@@ -3,4 +3,7 @@
         if(file_exists("Libraries/".'Core/'.$class.'.php')){
             require_once("Libraries/".'Core/'.$class.'.php');
         }
+        if(file_exists("Models/".$class.'.php')){
+            require_once("Models/".$class.'.php');
+        }
     });
