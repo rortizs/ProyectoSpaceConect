@@ -93,6 +93,12 @@
                             echo "active"; ?>">
                             <a href="<?= base_url() ?>/cajaNap/view_map">Mapa de Mufa y Caja Nap</a>
                         </li>
+                        <li class="<?php if ($current[0] == "network" && $current[1] == "contentfilter")
+                            echo "active"; ?>">
+                            <a href="<?= base_url() ?>/network/contentfilter">
+                                <i class="fas fa-shield-alt"></i> Filtro de Contenido
+                            </a>
+                        </li>
                     </ul>
                 </li>
             <?php } ?>

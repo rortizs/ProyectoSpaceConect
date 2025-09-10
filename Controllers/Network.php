@@ -679,4 +679,251 @@ class Network extends Controllers
     {
         return $this->views->getView($this, "ip-template", []);
     }
+
+    /* CONTENT FILTERING */
+    public function contentfilter()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            header("Location:" . base_url() . '/dashboard');
+        }
+        $data['page_name'] = "Filtro de Contenido";
+        $data['page_title'] = "Gestión de Filtro de Contenido";
+        $data['home_page'] = "Dashboard";
+        $data['actual_page'] = "Filtro de Contenido";
+        $data['page_functions_js'] = "contentfilter.js";
+
+        // Get content filter service
+        $contentFilterService = new ContentFilterService();
+        
+        $data['categories'] = $contentFilterService->getCategories();
+        $data['policies'] = $contentFilterService->getPolicies();
+        $data['stats'] = $this->ContentfilterModel->getFilteringStats();
+        
+        // Get clients without filtering
+        $data['unfiltered_clients'] = $this->ContentfilterModel->getClientsWithoutFiltering();
+        
+        // Get recent logs
+        $data['recent_logs'] = $contentFilterService->getFilteringLogs(null, 20);
+
+        $this->views->getView($this, "contentfilter", $data);
+    }
+
+    public function apply_content_filter()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            header("Location:" . base_url() . '/dashboard');
+        }
+        $res = (object) array();
+
+        if (!empty($_POST['client_id']) && !empty($_POST['policy_id']) && !empty($_POST['router_id'])) {
+            
+            $contentFilterService = new ContentFilterService();
+            $result = $contentFilterService->applyPolicyToClient(
+                $_POST['client_id'], 
+                $_POST['policy_id'], 
+                $_POST['router_id']
+            );
+
+            $res->result = $result['success'] ? "success" : "failed";
+            $res->message = $result['message'];
+            if (isset($result['domains_blocked'])) {
+                $res->domains_blocked = $result['domains_blocked'];
+            }
+        } else {
+            $res->result = "failed";
+            $res->message = "Parámetros requeridos faltantes";
+        }
+
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function remove_content_filter()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            header("Location:" . base_url() . '/dashboard');
+        }
+        $res = (object) array();
+
+        if (!empty($_POST['client_id']) && !empty($_POST['router_id'])) {
+            
+            $contentFilterService = new ContentFilterService();
+            $result = $contentFilterService->removePolicyFromClient(
+                $_POST['client_id'], 
+                $_POST['router_id']
+            );
+
+            $res->result = $result['success'] ? "success" : "failed";
+            $res->message = $result['message'];
+            if (isset($result['domains_unblocked'])) {
+                $res->domains_unblocked = $result['domains_unblocked'];
+            }
+        } else {
+            $res->result = "failed";
+            $res->message = "Parámetros requeridos faltantes";
+        }
+
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function get_client_filter_status()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            header("Location:" . base_url() . '/dashboard');
+        }
+        $res = (object) array();
+
+        if (!empty($_POST['client_id']) && !empty($_POST['router_id'])) {
+            
+            $policy = $this->ContentfilterModel->getClientPolicy($_POST['client_id'], $_POST['router_id']);
+            
+            if ($policy) {
+                $res->result = "success";
+                $res->has_policy = true;
+                $res->policy = $policy;
+            } else {
+                $res->result = "success";
+                $res->has_policy = false;
+            }
+        } else {
+            $res->result = "failed";
+            $res->message = "Parámetros requeridos faltantes";
+        }
+
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function create_filter_policy()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            header("Location:" . base_url() . '/dashboard');
+        }
+        $res = (object) array();
+
+        if (!empty($_POST['name']) && !empty($_POST['category_ids'])) {
+            
+            $contentFilterService = new ContentFilterService();
+            $result = $contentFilterService->createPolicy(
+                $_POST['name'],
+                $_POST['description'] ?? '',
+                $_POST['category_ids'],
+                isset($_POST['is_default']) ? (bool)$_POST['is_default'] : false
+            );
+
+            $res->result = $result['success'] ? "success" : "failed";
+            $res->message = $result['message'];
+            if (isset($result['policy_id'])) {
+                $res->policy_id = $result['policy_id'];
+            }
+        } else {
+            $res->result = "failed";
+            $res->message = "Nombre de política y categorías son requeridos";
+        }
+
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function get_filter_categories()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            header("Location:" . base_url() . '/dashboard');
+        }
+        $res = (object) array();
+
+        $categories = $this->ContentfilterModel->getCategories();
+        
+        $res->result = "success";
+        $res->data = $categories;
+
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function get_filter_policies()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            header("Location:" . base_url() . '/dashboard');
+        }
+        $res = (object) array();
+
+        $contentFilterService = new ContentFilterService();
+        $policies = $contentFilterService->getPolicies();
+        
+        $res->result = "success";
+        $res->data = $policies;
+
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function get_filtering_logs()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            header("Location:" . base_url() . '/dashboard');
+        }
+        $res = (object) array();
+
+        $client_id = isset($_POST['client_id']) ? $_POST['client_id'] : null;
+        $limit = isset($_POST['limit']) ? (int)$_POST['limit'] : 50;
+
+        $contentFilterService = new ContentFilterService();
+        $logs = $contentFilterService->getFilteringLogs($client_id, $limit);
+        
+        $res->result = "success";
+        $res->data = $logs;
+
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function bulk_apply_filter()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            header("Location:" . base_url() . '/dashboard');
+        }
+        $res = (object) array();
+
+        if (!empty($_POST['client_ids']) && !empty($_POST['policy_id'])) {
+            
+            $contentFilterService = new ContentFilterService();
+            $client_ids = explode(',', $_POST['client_ids']);
+            $results = [];
+            $success_count = 0;
+            $error_count = 0;
+
+            foreach ($client_ids as $client_id) {
+                $client_id = trim($client_id);
+                if (empty($client_id)) continue;
+
+                // Get client's router
+                $client = sqlObject("SELECT net_router FROM clients WHERE id = ?", [$client_id]);
+                if (!$client) continue;
+
+                $result = $contentFilterService->applyPolicyToClient(
+                    $client_id, 
+                    $_POST['policy_id'], 
+                    $client->net_router
+                );
+
+                if ($result['success']) {
+                    $success_count++;
+                } else {
+                    $error_count++;
+                }
+
+                $results[] = [
+                    'client_id' => $client_id,
+                    'success' => $result['success'],
+                    'message' => $result['message']
+                ];
+            }
+
+            $res->result = "success";
+            $res->message = "Procesados: {$success_count} exitosos, {$error_count} errores";
+            $res->results = $results;
+            $res->success_count = $success_count;
+            $res->error_count = $error_count;
+        } else {
+            $res->result = "failed";
+            $res->message = "IDs de clientes y política son requeridos";
+        }
+
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+    }
 }

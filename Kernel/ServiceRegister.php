@@ -26,5 +26,6 @@ $serviceRegister = [
     "BillInfoService",
     "PlanillaWspSaveService",
     "PlantillaWspInfoService",
-    "BackupDBService"
+    "BackupDBService",
+    "ContentFilterService"
 ];

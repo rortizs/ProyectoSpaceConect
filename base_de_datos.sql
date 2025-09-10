@@ -1302,7 +1302,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `names`, `surnames`, `documentid`, `document`, `mobile`, `email`, `profileid`, `username`, `password`, `token`, `image`, `registration_date`, `state`) VALUES
-(1, 'ADMIN', 'ADMIN', 2, '04801044274', '85251599', 'rias12112@gmail.com', 1, 'admin', 'RWJ1OEhjSzNGd1c4TitTK0hkQ3VJUT09', '', 'user_default.png', '2022-07-07 19:39:22', 1);
+(1, 'ADMIN', 'ADMIN', 2, '04801044274', '44444444', 'admin@gmail.com', 1, 'admin', 'RWJ1OEhjSzNGd1c4TitTK0hkQ3VJUT09', '', 'user_default.png', '2022-07-07 19:39:22', 1);
 
 -- --------------------------------------------------------
 

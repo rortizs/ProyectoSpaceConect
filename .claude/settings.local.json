@@ -4,7 +4,11 @@
       "Bash(php -l:*)",
       "Bash(curl:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(php:*)"
     ],
     "deny": [],
     "ask": []

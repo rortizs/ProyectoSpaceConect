@@ -315,4 +315,184 @@ public function APIModifyPPPSecret($id, $name, $address, $password, $localAddres
 
         return $res;
     }
+
+    // CONTENT FILTERING METHODS
+    
+    //USE: Get all DNS static entries
+    public function APIListDNSStatic()
+    {
+        return $this->RequestBuilder("ip/dns/static", "GET");
+    }
+
+    //USE: Add DNS static entry for domain blocking
+    public function APIAddDNSBlock($domain, $redirect_ip = "0.0.0.0")
+    {
+        $res = (object) array();
+
+        // Check if domain already exists
+        $existing = $this->APIGetDNSStatic($domain);
+        
+        if (count($existing->data) == 0) {
+            $body = (object) array();
+            $body->name = $domain;
+            $body->address = $redirect_ip;
+            $body->comment = "Content Filter Block";
+
+            $res = $this->RequestBuilder("ip/dns/static", "PUT", $body, ["Content-Type: application/json"]);
+        } else {
+            $res->success = false;
+            $res->message = "Domain already exists in DNS";
+        }
+
+        return $res;
+    }
+
+    //USE: Get specific DNS static entry
+    public function APIGetDNSStatic($domain)
+    {
+        $body = (object) array();
+        $body->{".query"} = ["name=$domain"];
+        return $this->RequestBuilder("ip/dns/static/print", "POST", $body, ["Content-Type: application/json"]);
+    }
+
+    //USE: Remove DNS static entry for domain unblocking
+    public function APIRemoveDNSBlock($domain)
+    {
+        $res = (object) array();
+
+        $dns_entry = $this->APIGetDNSStatic($domain);
+
+        if ($dns_entry->success) {
+            if (count($dns_entry->data) > 0) {
+                $id = $dns_entry->data[0]->{".id"};
+                $res = $this->RequestBuilder("ip/dns/static/$id", "DELETE");
+            } else {
+                $res->success = false;
+                $res->message = "Domain not found in DNS";
+            }
+        } else {
+            $res = $dns_entry;
+        }
+
+        return $res;
+    }
+
+    //USE: Add multiple domains to DNS block list
+    public function APIAddMultipleDNSBlocks($domains, $redirect_ip = "0.0.0.0")
+    {
+        $results = [];
+        
+        foreach ($domains as $domain) {
+            $results[$domain] = $this->APIAddDNSBlock($domain, $redirect_ip);
+        }
+        
+        return $results;
+    }
+
+    //USE: Remove multiple domains from DNS block list
+    public function APIRemoveMultipleDNSBlocks($domains)
+    {
+        $results = [];
+        
+        foreach ($domains as $domain) {
+            $results[$domain] = $this->APIRemoveDNSBlock($domain);
+        }
+        
+        return $results;
+    }
+
+    //USE: Get web proxy configuration
+    public function APIGetWebProxy()
+    {
+        return $this->RequestBuilder("ip/web-proxy", "GET");
+    }
+
+    //USE: Get web proxy access rules
+    public function APIListWebProxyAccess()
+    {
+        return $this->RequestBuilder("ip/web-proxy/access", "GET");
+    }
+
+    //USE: Add web proxy access rule for content filtering
+    public function APIAddWebProxyAccess($src_address, $dst_host, $action = "deny", $method = "get,post")
+    {
+        $res = (object) array();
+
+        $body = (object) array();
+        $body->{"src-address"} = $src_address;
+        $body->{"dst-host"} = $dst_host;
+        $body->action = $action;
+        $body->method = $method;
+        $body->comment = "Content Filter Rule";
+
+        $res = $this->RequestBuilder("ip/web-proxy/access", "PUT", $body, ["Content-Type: application/json"]);
+
+        return $res;
+    }
+
+    //USE: Get web proxy access rule by source address and destination
+    public function APIGetWebProxyAccess($src_address, $dst_host)
+    {
+        $body = (object) array();
+        $body->{".query"} = ["src-address=$src_address", "dst-host=$dst_host"];
+        return $this->RequestBuilder("ip/web-proxy/access/print", "POST", $body, ["Content-Type: application/json"]);
+    }
+
+    //USE: Remove web proxy access rule
+    public function APIRemoveWebProxyAccess($src_address, $dst_host)
+    {
+        $res = (object) array();
+
+        $access_rule = $this->APIGetWebProxyAccess($src_address, $dst_host);
+
+        if ($access_rule->success) {
+            if (count($access_rule->data) > 0) {
+                $id = $access_rule->data[0]->{".id"};
+                $res = $this->RequestBuilder("ip/web-proxy/access/$id", "DELETE");
+            } else {
+                $res->success = false;
+                $res->message = "Access rule not found";
+            }
+        } else {
+            $res = $access_rule;
+        }
+
+        return $res;
+    }
+
+    //USE: Apply content filtering policy to client IP
+    public function APIApplyContentFilter($client_ip, $blocked_domains)
+    {
+        $results = [];
+        
+        // Method 1: DNS Blocking (redirect domains to 0.0.0.0)
+        foreach ($blocked_domains as $domain) {
+            $results['dns'][$domain] = $this->APIAddDNSBlock($domain);
+        }
+        
+        // Method 2: Web Proxy Rules (if proxy is enabled)
+        foreach ($blocked_domains as $domain) {
+            $results['proxy'][$domain] = $this->APIAddWebProxyAccess($client_ip, $domain, "deny");
+        }
+        
+        return $results;
+    }
+
+    //USE: Remove content filtering policy from client IP
+    public function APIRemoveContentFilter($client_ip, $blocked_domains)
+    {
+        $results = [];
+        
+        // Remove DNS blocks
+        foreach ($blocked_domains as $domain) {
+            $results['dns'][$domain] = $this->APIRemoveDNSBlock($domain);
+        }
+        
+        // Remove web proxy rules
+        foreach ($blocked_domains as $domain) {
+            $results['proxy'][$domain] = $this->APIRemoveWebProxyAccess($client_ip, $domain);
+        }
+        
+        return $results;
+    }
 }
