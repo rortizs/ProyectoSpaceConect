@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS `content_filter_policy_categories` (
 -- Links clients with filtering policies
 CREATE TABLE IF NOT EXISTS `content_filter_client_policies` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `client_id` int(11) NOT NULL,
+  `client_id` bigint NOT NULL,
   `policy_id` int(11) NOT NULL,
   `router_id` int(11) NOT NULL COMMENT 'Router where the policy is applied',
   `is_active` tinyint(1) DEFAULT 1 COMMENT '1=Active, 0=Inactive',
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS `content_filter_client_policies` (
 -- Client-specific custom blocked/allowed domains
 CREATE TABLE IF NOT EXISTS `content_filter_custom_domains` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `client_id` int(11) NOT NULL,
+  `client_id` bigint NOT NULL,
   `domain` varchar(255) NOT NULL,
   `action` enum('block','allow') DEFAULT 'block',
   `comment` text COMMENT 'Reason for custom rule',
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS `content_filter_custom_domains` (
 -- Logs filtering activities for monitoring and reporting
 CREATE TABLE IF NOT EXISTS `content_filter_logs` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `client_id` int(11) NOT NULL,
+  `client_id` bigint NOT NULL,
   `router_id` int(11) NOT NULL,
   `action` enum('apply','remove','update') NOT NULL,
   `policy_id` int(11) DEFAULT NULL,

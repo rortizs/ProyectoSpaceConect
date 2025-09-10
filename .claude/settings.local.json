@@ -9,7 +9,8 @@
       "Bash(cat:*)",
       "Bash(find:*)",
       "Bash(php:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(mysql:*)"
     ],
     "deny": [],
     "ask": []
