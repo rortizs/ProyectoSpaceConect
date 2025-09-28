@@ -359,9 +359,9 @@ CREATE TABLE `clients` (
 --
 
 INSERT INTO `clients` (`id`, `names`, `surnames`, `documentid`, `document`, `mobile`, `mobile_optional`, `email`, `address`, `reference`, `note`, `latitud`, `longitud`, `state`, `net_router`, `net_name`, `net_password`, `net_localaddress`, `net_ip`, `nap_cliente_id`, `ap_cliente_id`, `zonaid`) VALUES
-(1, 'WALTER JUNIOR', 'RENGIFO ESPINOZA', 2, '92823759', '999220735', '123456789', 'ejemplo@gmail.com', 'DIRECCION', 'REFERENCIA', 'LA NOTA', '-9.303541', '-76.403265', 1, 4, 'WALTER-JUNIOR-RENGIFO-ESPINOZA', 'pOjxQpT/vp7ZcrngOdsd5nZLckIyL2JjQURKZ0U0dVFSQkp1VFRKRWR6bnlmQkhwczF0Q2ZJVGJwMnc9', '18.19.20.1', '18.19.20.3', 0, 1, 2),
+(1, 'CLIENTE', 'EJEMPLO UNO', 2, '12345678', '987654321', '123456789', 'cliente1@ejemplo.com', 'DIRECCION EJEMPLO', 'REFERENCIA EJEMPLO', 'NOTA EJEMPLO', '-9.303541', '-76.403265', 1, 4, 'CLIENTE-EJEMPLO-UNO', 'pOjxQpT/vp7ZcrngOdsd5nZLckIyL2JjQURKZ0U0dVFSQkp1VFRKRWR6bnlmQkhwczF0Q2ZJVGJwMnc9', '18.19.20.1', '18.19.20.3', 0, 1, 2),
 (2, 'PRUEBA', 'PRUEBA P', 2, '45454545', '969696969', '', '', 'SAN JUAN', 'PLAZA', 'OK', '15.12653009035351', '-91.81569952620707', 1, 5, 'PRUEBA-PRUEBA-P', 'd6xvGeynvQRSKIN+l7MMC3djajBJTDI4TkRVbktNR3RzSWwrT0Rob3V1ZStqbzRlWkVUNGtSZ1pWUjg9', '192.168.10.1', '192.168.10.2', 1, 0, 1),
-(3, 'WALTER JAVIER', 'RENGIFO ESPINOZA', 2, '75116541', '999220735', '972766166', 'ejemplo@gmail.com', 'DIRECCION DEL CLIENTE', 'REFRENCIA DEL DOMICILIO', 'MI PRIMO', '-11.8549809', '-77.0182917', 1, 5, 'WALTER-JAVIER-RENGIFO-ESPINOZA', 'OFv6Mu2iauO8y4geQad9ylQvZmM4aVcra3NxZmRzai9yeGtwT2NFd3gvYlJ3dW1CZXV0UU9YdThySjQ9', '192.168.10.1', '192.168.10.30', 5, 0, 0),
+(3, 'CLIENTE', 'EJEMPLO DOS', 2, '87654321', '987654322', '123456788', 'cliente2@ejemplo.com', 'DIRECCION DEL CLIENTE', 'REFERENCIA DEL DOMICILIO', 'NOTA CLIENTE', '-11.8549809', '-77.0182917', 1, 5, 'CLIENTE-EJEMPLO-DOS', 'OFv6Mu2iauO8y4geQad9ylQvZmM4aVcra3NxZmRzai9yeGtwT2NFd3gvYlJ3dW1CZXV0UU9YdThySjQ9', '192.168.10.1', '192.168.10.30', 5, 0, 0),
 (4, 'JUAN', 'PEREZ SOTO', 3, '722794222', '958956952', '', 'juan@gmail.com', 'JR. JUAN', '', 'SERVICIO PRO2025', '-12.0356864', '-76.9622016', 1, 5, 'JUAN-PEREZ-SOTO', '2WK686h8hrAhMyNx+L3/fXpOWXR3cS9xWW9leHY0T3d1K2F2VEE9PQ==', '', '', 0, 0, 0);
 
 -- --------------------------------------------------------
@@ -734,8 +734,8 @@ CREATE TABLE `gallery_images` (
 --
 
 INSERT INTO `gallery_images` (`id`, `clientid`, `userid`, `type`, `typeid`, `registration_date`, `image`) VALUES
-(1, 1, 1, 3, 0, '2025-04-08 23:13:46', 'walter_junior_rengifo_espinoza_277755b5375d1bd09c46b56654f16a4d.png'),
-(2, 1, 1, 3, 0, '2025-04-12 06:15:40', 'walter_junior_rengifo_espinoza_6d929fb39e3fbd97ebd2bbb56b39e0c7.jpeg'),
+(1, 1, 1, 3, 0, '2025-04-08 23:13:46', 'cliente_ejemplo_uno_277755b5375d1bd09c46b56654f16a4d.png'),
+(2, 1, 1, 3, 0, '2025-04-12 06:15:40', 'cliente_ejemplo_uno_6d929fb39e3fbd97ebd2bbb56b39e0c7.jpeg'),
 (4, 2, 1, 3, 0, '2025-04-20 07:12:32', 'prueba_prueba_p_25ce65d37ea7e4698a1126867101d7a3.jpeg'),
 (5, 4, 1, 1, 4, '2025-05-04 12:25:00', 'juan_perez_soto_1a7584dde122ea0c67850ecc42ea3f3b.jpg');
 

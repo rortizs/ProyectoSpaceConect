@@ -215,14 +215,6 @@ Las contribuciones son bienvenidas. Por favor:
 
 Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
 
-## 👨‍💻 Desarrollador
-
-**Junior Espinoza**
-
-- 🌐 Website: [www.sntelecom.net.pe](https://www.sntelecom.net.pe)
-- 📧 Email: walterrengifo08@gmail.com
-- 📱 WhatsApp: +51 999 220 735
-
 ---
 
 <div align="center">

@@ -28,14 +28,14 @@ const TABLES_NAME = "Tables_in_u395713662_mikrotikdemo"; //backups - Tables_in_n
 // RUTA DE LA CARPETA LIBRARIES
 const LIBRARIES = __DIR__ . '/../Libraries';
 /* DESARROLLADOR*/
-const DEVELOPER = "JUNIOR ESPINOZA";
-const DEVELOPER_WEBSITE = "www.sntelecom.net.pe";
-const DEVELOPER_EMAIL = "walterrengifo08@gmail.com";
-const DEVELOPER_MOBILE = "+51 999 220 735";
+const DEVELOPER = "";
+const DEVELOPER_WEBSITE = "";
+const DEVELOPER_EMAIL = "";
+const DEVELOPER_MOBILE = "";
 /* CONST UTILES*/
-const MEDIOSDEPAGO = "https://sntelecom.net.pe/mediosdepago.jpg";
-const WHATSAPPLOG = "https://sntelecom.net.pe/mediosdepago.jpg";
-const FACEBOOKLOG = "https://sntelecom.net.pe/mediosdepago.jpg";
+const MEDIOSDEPAGO = "";
+const WHATSAPPLOG = "";
+const FACEBOOKLOG = "";
 /* SISTEMA */
 const NAME_SYSTEM = "INTERNET SISTEMA";
 /* CONSTANTES DE ENCRIPTACION */

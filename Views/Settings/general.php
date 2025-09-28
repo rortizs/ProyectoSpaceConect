@@ -632,7 +632,7 @@ $currencys = $data['options']['currencys'];
                         <div class="col-md-8">
                           <input type="text" class="form-control" value="<?= $_SESSION['businessData']['whatsapp_key'] ?>" name="whatsapp_key" id="whatsapp_key">
                           <small>Para obtener su Token visite: <a href="https://app.then.net.pe/login" target="_blank">Obtén tu token</a></small>-
-                          <small>Para adquirir accesso contacte: <a href="https://api.whatsapp.com/send?phone=+51999220735&text=Hola%20deseo%20obtener%20un%20*TOKEN*%20de%20API%20WhatsApp,%20para%20usar%20en%20la%20plataforma%20*SISTEMA%20WISP*" target="_blank">WhatsApp</a></small>
+                          <small>Para adquirir acceso contacte al administrador del sistema</small>
                         </div>
                       </div>
                       <div class="form-group row justify-content-center">
