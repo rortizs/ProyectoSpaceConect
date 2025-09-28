@@ -196,10 +196,22 @@ max_execution_time = 300
 
 ## 📚 Documentación Adicional
 
-- [**Guía de Usuario**](docs/USER_GUIDE.md) - Manual completo del sistema
-- [**API Documentation**](docs/API.md) - Endpoints y integración
-- [**Esquema de Base de Datos**](Squema.md) - Estructura de datos
-- [**Diagramas UML**](UML.md) - Arquitectura del sistema
+### 📖 Guías y Manuales
+- [**📋 Guía de Usuario**](docs/USER_GUIDE.md) - Manual completo del sistema
+- [**🔌 API Documentation**](docs/API_DOCUMENTATION.md) - Endpoints y integración
+- [**🗄️ Esquema de Base de Datos**](docs/DATABASE_SCHEMA.md) - Estructura de datos
+- [**🏗️ Diagramas UML**](docs/UML_DIAGRAMS.md) - Arquitectura del sistema
+
+### 🎯 Recursos Técnicos
+- **Instalación y Configuración**: Guía paso a paso para implementar el sistema
+- **Integración MikroTik**: Configuración de routers y API
+- **Personalización**: Adaptación del sistema a necesidades específicas
+- **Mantenimiento**: Procedimientos de backup y optimización
+
+### 📊 Casos de Uso
+- **WISP Pequeño** (1-100 clientes): Configuración básica
+- **WISP Mediano** (100-500 clientes): Configuración escalable
+- **WISP Grande** (500+ clientes): Configuración empresarial
 
 ## 🤝 Contribución
 
