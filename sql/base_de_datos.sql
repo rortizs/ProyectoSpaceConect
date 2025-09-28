@@ -1365,9 +1365,28 @@ CREATE TABLE `zonas` (
 --
 
 INSERT INTO `zonas` (`id`, `nombre_zona`, `registration_date`, `state`) VALUES
-(1, 'BOLIVIA', '2025-04-09 16:09:42', 1),
-(2, 'PERU', '2025-04-09 16:09:46', 1),
-(3, 'CHILE', '2025-04-09 16:09:49', 1);
+(1, 'GUATEMALA', '2025-01-27 10:00:00', 1),
+(2, 'ALTA VERAPAZ', '2025-01-27 10:00:00', 1),
+(3, 'BAJA VERAPAZ', '2025-01-27 10:00:00', 1),
+(4, 'IZABAL', '2025-01-27 10:00:00', 1),
+(5, 'CHIQUIMULA', '2025-01-27 10:00:00', 1),
+(6, 'ZACAPA', '2025-01-27 10:00:00', 1),
+(7, 'EL PROGRESO', '2025-01-27 10:00:00', 1),
+(8, 'JALAPA', '2025-01-27 10:00:00', 1),
+(9, 'JUTIAPA', '2025-01-27 10:00:00', 1),
+(10, 'SANTA ROSA', '2025-01-27 10:00:00', 1),
+(11, 'SACATEPÉQUEZ', '2025-01-27 10:00:00', 1),
+(12, 'CHIMALTENANGO', '2025-01-27 10:00:00', 1),
+(13, 'ESCUINTLA', '2025-01-27 10:00:00', 1),
+(14, 'SUCHITEPÉQUEZ', '2025-01-27 10:00:00', 1),
+(15, 'MAZATENANGO', '2025-01-27 10:00:00', 1),
+(16, 'RETALHULEU', '2025-01-27 10:00:00', 1),
+(17, 'SAN MARCOS', '2025-01-27 10:00:00', 1),
+(18, 'HUEHUETENANGO', '2025-01-27 10:00:00', 1),
+(19, 'QUICHÉ', '2025-01-27 10:00:00', 1),
+(20, 'TOTONICAPÁN', '2025-01-27 10:00:00', 1),
+(21, 'SOLOLÁ', '2025-01-27 10:00:00', 1),
+(22, 'PETÉN', '2025-01-27 10:00:00', 1);
 
 --
 -- Índices para tablas volcadas
@@ -1994,7 +2013,7 @@ ALTER TABLE `voucher_series`
 -- AUTO_INCREMENT de la tabla `zonas`
 --
 ALTER TABLE `zonas`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- Restricciones para tablas volcadas
