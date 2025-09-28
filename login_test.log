@@ -1,5 +1,0 @@
-Cannot load Xdebug - it was already loaded
-[Tue Sep  9 15:00:57 2025] PHP 8.3.24 Development Server (http://localhost:8003) started
-[Tue Sep  9 15:01:43 2025] [::1]:52100 Accepted
-[Tue Sep  9 15:01:43 2025] [::1]:52100 [200]: POST /login/validation
-[Tue Sep  9 15:01:43 2025] [::1]:52100 Closing

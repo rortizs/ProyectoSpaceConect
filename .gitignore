@@ -57,6 +57,7 @@ rollback_changes.php
 update_router_config.php
 
 # Archivos de documentación de desarrollo (mantener solo los del cliente)
+CLAUDE.md
 database_class_diagram.puml
 DEPLOYMENT_GUIDE.md
 PRODUCTION_CHECKLIST.md
