@@ -4,7 +4,7 @@ class BusinessModel extends Mysql
 	private $intId, $strTypes, $strDocument, $strBussines, $strTradename, $strSlogan, $strMobile, $strReference;
 	private $strAddress, $strDepartment, $strProvince, $strDistrict, $strUbigeo, $strFooter;
 	private $intPrinters, $intCurrency, $strLogotype, $strLogoLogin, $strFavicon;
-	private $strCountry, $strGoogle, $strReniec;
+	private $strCountry, $strGoogle;
 	private $strEmail, $strPassword, $strServer, $strPort, $intIdBackup, $strLogoEmail, $strBackground;
 	public function __construct()
 	{
@@ -18,7 +18,7 @@ class BusinessModel extends Mysql
 	}
 	public function show_business()
 	{
-		$sql = "SELECT  b.id,b.documentid,b.ruc,b.business_name,b.tradename,b.slogan,b.mobile,b.mobile_refrence,b.email,b.password,b.server_host,b.port,b.address,b.department,b.province,b.district,b.ubigeo,b.footer_text,b.currencyid,b.print_format,b.logo_login,b.logotyope,b.logo_email,b.favicon,b.country_code,b.google_apikey,b.reniec_apikey,b.background,c.symbol,c.money,c.money_plural, b.whatsapp_key, b.whatsapp_api FROM business b JOIN currency c ON b.currencyid = c.id";
+		$sql = "SELECT  b.id,b.documentid,b.ruc,b.business_name,b.tradename,b.slogan,b.mobile,b.mobile_refrence,b.email,b.password,b.server_host,b.port,b.address,b.department,b.province,b.district,b.ubigeo,b.footer_text,b.currencyid,b.print_format,b.logo_login,b.logotyope,b.logo_email,b.favicon,b.country_code,b.google_apikey,b.background,c.symbol,c.money,c.money_plural, b.whatsapp_key, b.whatsapp_api FROM business b JOIN currency c ON b.currencyid = c.id";
 		$request = $this->select($sql);
 		$_SESSION['businessData'] = $request;
 		return $request;
@@ -147,21 +147,6 @@ class BusinessModel extends Mysql
 		$answer = "";
 		$sql = "UPDATE business SET google_apikey = ? WHERE id = $this->intId";
 		$data = array($this->strGoogle);
-		$request = $this->update($sql, $data);
-		if ($request) {
-			$answer = 'success';
-		} else {
-			$answer = 'error';
-		}
-		return $answer;
-	}
-	public function update_reniec(int $id, string $api)
-	{
-		$this->intId = $id;
-		$this->strReniec = $api;
-		$answer = "";
-		$sql = "UPDATE business SET reniec_apikey = ? WHERE id = $this->intId";
-		$data = array($this->strReniec);
 		$request = $this->update($sql, $data);
 		if ($request) {
 			$answer = 'success';

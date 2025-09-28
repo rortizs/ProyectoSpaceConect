@@ -10,7 +10,9 @@
       "Bash(find:*)",
       "Bash(php:*)",
       "Bash(git checkout:*)",
-      "Bash(mysql:*)"
+      "Bash(mysql:*)",
+      "Bash(timeout:*)",
+      "Read(//var/log/apache2/**)"
     ],
     "deny": [],
     "ask": []

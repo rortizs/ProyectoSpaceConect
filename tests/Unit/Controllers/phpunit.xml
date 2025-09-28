@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.5/phpunit.xsd"
+    bootstrap="../../../vendor/autoload.php"
+    cacheResultFile="../../.phpunit.cache/test-results"
+    executionOrder="depends,defects"
+    forceCoversAnnotation="false"
+    beStrictAboutCoversAnnotation="true"
+    beStrictAboutOutputDuringTests="true"
+    beStrictAboutTodoAnnotatedTests="true"
+    failOnRisky="true"
+    failOnWarning="true"
+    verbose="true"
+    colors="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    processIsolation="false"
+    stopOnFailure="false">
+
+    <testsuites>
+        <testsuite name="Controllers">
+            <directory>./</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">../../../Controllers</directory>
+        </include>
+        <exclude>
+            <directory>../../../vendor</directory>
+            <directory>../../../tests</directory>
+            <file>../../../Controllers/Error.php</file>
+            <file>../../../Controllers/Help.php</file>
+        </exclude>
+        <report>
+            <html outputDirectory="../../coverage/controllers"/>
+            <text outputFile="../../coverage/controllers-coverage.txt"/>
+            <clover outputFile="../../coverage/controllers-clover.xml"/>
+        </report>
+    </coverage>
+
+    <logging>
+        <junit outputFile="../../reports/controllers-junit.xml"/>
+        <testdoxHtml outputFile="../../reports/controllers-testdox.html"/>
+        <testdoxText outputFile="../../reports/controllers-testdox.txt"/>
+    </logging>
+
+    <php>
+        <!-- Test Environment Configuration -->
+        <const name="TESTING_MODE" value="true"/>
+        <const name="MOCK_EXTERNAL_SERVICES" value="true"/>
+        <const name="ENABLE_TEST_LOGGING" value="false"/>
+
+        <!-- Database Test Configuration -->
+        <const name="DB_HOST_TEST" value="localhost"/>
+        <const name="DB_NAME_TEST" value="test_isp_management"/>
+        <const name="DB_USER_TEST" value="root"/>
+        <const name="DB_PASSWORD_TEST" value=""/>
+
+        <!-- MikroTik Test Configuration -->
+        <const name="MIKROTIK_TEST_HOST" value="192.168.88.1"/>
+        <const name="MIKROTIK_TEST_PORT" value="8728"/>
+        <const name="MIKROTIK_TEST_USER" value="admin"/>
+        <const name="MIKROTIK_TEST_PASSWORD" value="test123"/>
+
+        <!-- Application Constants -->
+        <const name="DASHBOARD" value="1"/>
+        <const name="CLIENTS" value="2"/>
+        <const name="INSTALLATIONS" value="3"/>
+        <const name="BILLS" value="4"/>
+        <const name="PAYMENTS" value="5"/>
+        <const name="PRODUCTS" value="6"/>
+        <const name="USERS" value="7"/>
+        <const name="SETTINGS" value="8"/>
+
+        <!-- User Roles -->
+        <const name="ADMINISTRATOR" value="1"/>
+        <const name="TECHNICAL" value="2"/>
+        <const name="CHARGES" value="3"/>
+
+        <!-- Security -->
+        <const name="SECRET_IV" value="test_secret_key_for_testing"/>
+
+        <!-- Disable output buffering for tests -->
+        <ini name="output_buffering" value="Off"/>
+        <ini name="memory_limit" value="512M"/>
+        <ini name="max_execution_time" value="60"/>
+
+        <!-- Error Reporting -->
+        <ini name="error_reporting" value="E_ALL"/>
+        <ini name="display_errors" value="1"/>
+        <ini name="display_startup_errors" value="1"/>
+
+        <!-- Timezone -->
+        <ini name="date.timezone" value="America/Lima"/>
+    </php>
+
+    <groups>
+        <include>
+            <group>unit</group>
+            <group>controllers</group>
+        </include>
+        <exclude>
+            <group>integration</group>
+            <group>slow</group>
+        </exclude>
+    </groups>
+
+    <listeners>
+        <!-- Custom test listeners can be added here -->
+    </listeners>
+
+    <extensions>
+        <!-- PHPUnit extensions can be added here -->
+    </extensions>
+</phpunit>

@@ -95,3 +95,28 @@
     </div>
   </div>
 </div>
+
+<div class="form-group row m-b-10" id="content-queue_tree" style="display: none;">
+  <label class="col-md-3 text-lg-right col-form-label">Política Queue Tree <span class="text-danger">*</span></label>
+  <div class="col-md-4">
+    <select class="form-control" id="queue_tree_policy" name="queue_tree_policy">
+      <option value="">Seleccionar política</option>
+    </select>
+  </div>
+</div>
+
+<div class="form-group row m-b-10" id="content-queue_tree_limits" style="display: none;">
+  <label class="col-md-3 text-lg-right col-form-label">Límites Personalizados</label>
+  <div class="col-md-4">
+    <div class="row">
+      <div class="col-6">
+        <input type="text" class="form-control" id="queue_tree_upload" name="queue_tree_upload" placeholder="Upload (ej: 5M)" />
+        <small class="text-muted">Upload</small>
+      </div>
+      <div class="col-6">
+        <input type="text" class="form-control" id="queue_tree_download" name="queue_tree_download" placeholder="Download (ej: 10M)" />
+        <small class="text-muted">Download</small>
+      </div>
+    </div>
+  </div>
+</div>

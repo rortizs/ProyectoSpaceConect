@@ -79,10 +79,10 @@ class ContentFilterService extends BaseService
         $sql = "SELECT c.*, pc.action 
                 FROM content_filter_policy_categories pc
                 JOIN content_filter_categories c ON c.id = pc.category_id
-                WHERE pc.policy_id = ? AND c.is_active = 1
+                WHERE pc.policy_id = $policy_id AND c.is_active = 1
                 ORDER BY c.name";
         
-        $result = sql($sql, [$policy_id]);
+        $result = sql($sql);
         $categories = [];
         
         while ($row = mysqli_fetch_array($result, MYSQLI_ASSOC)) {
@@ -99,13 +99,13 @@ class ContentFilterService extends BaseService
     {
         try {
             // Get client information
-            $client = sqlObject("SELECT * FROM clients WHERE id = ?", [$client_id]);
+            $client = sqlObject("SELECT * FROM clients WHERE id = $client_id");
             if (!$client) {
                 throw new Exception("Cliente no encontrado");
             }
 
             // Get router information
-            $router_info = sqlObject("SELECT * FROM network_routers WHERE id = ?", [$router_id]);
+            $router_info = sqlObject("SELECT * FROM network_routers WHERE id = $router_id");
             if (!$router_info) {
                 throw new Exception("Router no encontrado");
             }
@@ -127,13 +127,14 @@ class ContentFilterService extends BaseService
                 throw new Exception("No hay dominios para bloquear en esta política");
             }
 
-            // Connect to router and apply filtering
-            include_once 'Libraries/MikroTik/Router.php';
-            $router = new Router(
+            // Connect to router using hybrid system
+            include_once 'Libraries/MikroTik/RouterFactory.php';
+            $router = RouterFactory::create(
                 $router_info['ip'], 
                 $router_info['port'], 
                 $router_info['username'], 
-                decrypt_aes($router_info['password'], SECRET_IV)
+                decrypt_aes($router_info['password'], SECRET_IV),
+                $router_info['api_type'] ?? 'auto'
             );
 
             if (!$router->connected) {
@@ -174,19 +175,19 @@ class ContentFilterService extends BaseService
     {
         try {
             // Get client information
-            $client = sqlObject("SELECT * FROM clients WHERE id = ?", [$client_id]);
+            $client = sqlObject("SELECT * FROM clients WHERE id = $client_id");
             if (!$client) {
                 throw new Exception("Cliente no encontrado");
             }
 
             // Get current policy assignment
-            $client_policy = sqlObject("SELECT * FROM content_filter_client_policies WHERE client_id = ? AND router_id = ? AND is_active = 1", [$client_id, $router_id]);
+            $client_policy = sqlObject("SELECT * FROM content_filter_client_policies WHERE client_id = $client_id AND router_id = $router_id AND is_active = 1");
             if (!$client_policy) {
                 throw new Exception("No hay política activa para este cliente");
             }
 
             // Get router information
-            $router_info = sqlObject("SELECT * FROM network_routers WHERE id = ?", [$router_id]);
+            $router_info = sqlObject("SELECT * FROM network_routers WHERE id = $router_id");
             if (!$router_info) {
                 throw new Exception("Router no encontrado");
             }
@@ -203,13 +204,14 @@ class ContentFilterService extends BaseService
 
             $blocked_domains = $this->getDomainsByCategories($blocked_category_ids);
 
-            // Connect to router and remove filtering
-            include_once 'Libraries/MikroTik/Router.php';
-            $router = new Router(
+            // Connect to router using hybrid system
+            include_once 'Libraries/MikroTik/RouterFactory.php';
+            $router = RouterFactory::create(
                 $router_info['ip'], 
                 $router_info['port'], 
                 $router_info['username'], 
-                decrypt_aes($router_info['password'], SECRET_IV)
+                decrypt_aes($router_info['password'], SECRET_IV),
+                $router_info['api_type'] ?? 'auto'
             );
 
             if (!$router->connected) {
@@ -220,7 +222,7 @@ class ContentFilterService extends BaseService
             $results = $router->APIRemoveContentFilter($client['net_ip'], $blocked_domains);
 
             // Deactivate client policy assignment
-            sql("UPDATE content_filter_client_policies SET is_active = 0 WHERE id = ?", [$client_policy['id']]);
+            sql("UPDATE content_filter_client_policies SET is_active = 0 WHERE id = " . $client_policy['id']);
 
             // Log the action
             $this->logFilteringAction($client_id, $router_id, 'remove', $client_policy['policy_id'], $results);
@@ -251,9 +253,9 @@ class ContentFilterService extends BaseService
         $sql = "SELECT cp.*, p.name as policy_name, p.description as policy_description
                 FROM content_filter_client_policies cp
                 JOIN content_filter_policies p ON p.id = cp.policy_id
-                WHERE cp.client_id = ? AND cp.router_id = ? AND cp.is_active = 1";
+                WHERE cp.client_id = $client_id AND cp.router_id = $router_id AND cp.is_active = 1";
         
-        return sqlObject($sql, [$client_id, $router_id]);
+        return sqlObject($sql);
     }
 
     /**
@@ -262,7 +264,7 @@ class ContentFilterService extends BaseService
     private function saveClientPolicy($client_id, $policy_id, $router_id)
     {
         // First deactivate any existing policy for this client/router
-        sql("UPDATE content_filter_client_policies SET is_active = 0 WHERE client_id = ? AND router_id = ?", [$client_id, $router_id]);
+        sql("UPDATE content_filter_client_policies SET is_active = 0 WHERE client_id = $client_id AND router_id = $router_id");
         
         // Insert new policy assignment
         $data = [
@@ -300,24 +302,21 @@ class ContentFilterService extends BaseService
     public function getFilteringLogs($client_id = null, $limit = 100)
     {
         $where = "";
-        $params = [];
         
         if ($client_id) {
-            $where = "WHERE l.client_id = ?";
-            $params[] = $client_id;
+            $where = "WHERE l.client_id = $client_id";
         }
         
-        $sql = "SELECT l.*, c.name as client_name, r.name as router_name, p.name as policy_name
+        $sql = "SELECT l.*, c.names as client_name, r.name as router_name, p.name as policy_name
                 FROM content_filter_logs l
                 JOIN clients c ON c.id = l.client_id
                 JOIN network_routers r ON r.id = l.router_id
                 LEFT JOIN content_filter_policies p ON p.id = l.policy_id
                 $where
                 ORDER BY l.created_at DESC
-                LIMIT ?";
+                LIMIT $limit";
         
-        $params[] = $limit;
-        $result = sql($sql, $params);
+        $result = sql($sql);
         $logs = [];
         
         while ($row = mysqli_fetch_array($result, MYSQLI_ASSOC)) {
@@ -334,7 +333,7 @@ class ContentFilterService extends BaseService
     {
         try {
             // Check if policy name already exists
-            $existing = sqlObject("SELECT id FROM content_filter_policies WHERE name = ?", [$name]);
+            $existing = sqlObject("SELECT id FROM content_filter_policies WHERE name = '$name'");
             if ($existing) {
                 throw new Exception("Ya existe una política con ese nombre");
             }

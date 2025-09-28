@@ -1,0 +1,72 @@
+# Archivos específicos solicitados
+.claude/
+*.node
+*.json
+
+# Logs y archivos de depuración
+*.log
+debug.log
+server.log
+login_test.log
+dashboard_debug.log
+dashboard_error.log
+cookies_new.txt
+
+# Archivos temporales del sistema
+.DS_Store
+._.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Archivos de respaldo y temporales
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# Directorios de dependencias (si se usan)
+node_modules/
+vendor/
+bower_components/
+
+# Archivos de IDE y editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.atom/
+
+# Archivos de caché
+cache/
+*.cache
+.sass-cache/
+
+# Archivos de uploads dinámicos (mantener estructura pero no contenido)
+Uploads/*
+!Uploads/.gitignore
+
+# Archivos de diagnóstico y desarrollo
+deep_diagnosis.php
+debug_content_filter.php
+rollback_changes.php
+update_router_config.php
+
+# Archivos de documentación de desarrollo (mantener solo los del cliente)
+database_class_diagram.puml
+DEPLOYMENT_GUIDE.md
+PRODUCTION_CHECKLIST.md
+
+# MANTENER ESTOS ARCHIVOS IMPORTANTES PARA EL CLIENTE:
+# .env (configuración del cliente)
+# .htaccess (configuración del servidor)
+# *.sql (base de datos del cliente)
+# Config/ (configuración del sistema)
+# Assets/ (recursos del cliente)
+# Views/ (vistas del cliente)
+# Controllers/ (lógica del cliente)
+# Models/ (modelos del cliente)

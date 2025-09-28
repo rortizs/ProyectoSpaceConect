@@ -69,10 +69,31 @@ function getNapClientLabel() {
   return $("#nap_cliente_id");
 }
 
+function getQueueTreeContent() {
+  return $("#content-queue_tree");
+}
+
+function getQueueTreeSelect() {
+  return $("#queue_tree_policy");
+}
+
+function getQueueTreeUpload() {
+  return $("#queue_tree_upload");
+}
+
+function getQueueTreeDownload() {
+  return $("#queue_tree_download");
+}
+
+function getQueueTreeLimitsContent() {
+  return $("#content-queue_tree_limits");
+}
+
 function networkModes() {
   return [
     { mode: 1, title: "Nombre Simple Queue", type: "ap_client" },
     { mode: 2, title: "Nombre Secret PPPoE", type: "nap_client" },
+    { mode: 3, title: "Política Queue Tree", type: "queue_tree" },
   ];
 }
 
@@ -261,15 +282,34 @@ function changeRouter() {
       parentLocal.show();
       getNapClientContent().show();
       getApClientContent().hide();
+      getQueueTreeContent().hide();
+      getQueueTreeLimitsContent().hide();
       getApClientValue().val(null);
       getApClientLabel().val(null);
+      getQueueTreeSelect().val(null);
+    } else if (mode.type == "queue_tree") {
+      parenPassword.hide();
+      parentLocal.hide();
+      getNapClientContent().hide();
+      getApClientContent().hide();
+      getQueueTreeContent().show();
+      getQueueTreeLimitsContent().show();
+      getNapClientValue().val(null);
+      getNapClientLabel().val(null);
+      getApClientValue().val(null);
+      getApClientLabel().val(null);
+      // Load Queue Tree policies for this router
+      loadQueueTreePolicies(selected.val());
     } else {
       parenPassword.hide();
       parentLocal.hide();
       getNapClientContent().hide();
       getApClientContent().show();
+      getQueueTreeContent().hide();
+      getQueueTreeLimitsContent().hide();
       getNapClientValue().val(null);
       getNapClientLabel().val(null);
+      getQueueTreeSelect().val(null);
     }
 
     getNetNameId().val(mode.mode).trigger("change");
@@ -347,3 +387,44 @@ function loadComponentIP(id = "network_ip_mount") {
     })
     .catch(console.error);
 }
+
+// Load Queue Tree policies for selected router
+function loadQueueTreePolicies(routerId) {
+  if (!routerId) return;
+  
+  const select = getQueueTreeSelect();
+  select.empty().append('<option value="">Cargando políticas...</option>');
+  
+  $.ajax({
+    url: `${base_url}/queuetree/getPolicies`,
+    type: 'POST',
+    data: { router_id: routerId },
+    dataType: 'json',
+    success: function(response) {
+      select.empty().append('<option value="">Seleccionar política Queue Tree</option>');
+      
+      if (response.result === 'success' && response.data.length > 0) {
+        response.data.forEach(function(policy) {
+          select.append(`<option value="${policy.id}" data-upload="${policy.max_limit_upload || ''}" data-download="${policy.max_limit_download || ''}">${policy.name} (${policy.max_limit})</option>`);
+        });
+      } else {
+        select.append('<option value="">No hay políticas disponibles para este router</option>');
+      }
+    },
+    error: function() {
+      select.empty().append('<option value="">Error al cargar políticas</option>');
+    }
+  });
+}
+
+// Handle Queue Tree policy selection
+$(document).on('change', '#queue_tree_policy', function() {
+  const selected = $(this).find('option:selected');
+  const uploadLimit = selected.data('upload');
+  const downloadLimit = selected.data('download');
+  
+  if (uploadLimit && downloadLimit) {
+    getQueueTreeUpload().val(uploadLimit);
+    getQueueTreeDownload().val(downloadLimit);
+  }
+});

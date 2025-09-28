@@ -14,7 +14,7 @@ document.addEventListener(
     const wspApi = getWhatsappApi();
     const wspBtn = document.getElementById("whatsapp-massive");
     if (!wspApi) wspBtn.style = "display: none";
-    else wspBtn.style = "displaty: block";
+    else wspBtn.style = "display: block";
     table_configuration("#" + table_name, "Lista de facturas pendientes");
     table = $("#" + table_name)
       .DataTable({

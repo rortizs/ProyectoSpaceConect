@@ -495,4 +495,259 @@ public function APIModifyPPPSecret($id, $name, $address, $password, $localAddres
         
         return $results;
     }
+
+    // QUEUE TREE METHODS
+    // Métodos para gestión avanzada de QoS con Queue Tree
+    
+    /**
+     * Listar todos los Queue Trees
+     */
+    public function APIListQueueTree()
+    {
+        return $this->RequestBuilder("queue/tree", "GET");
+    }
+    
+    /**
+     * Obtener Queue Tree específico por ID
+     */
+    public function APIGetQueueTree($queue_id)
+    {
+        return $this->RequestBuilder("queue/tree/$queue_id", "GET");
+    }
+    
+    /**
+     * Crear nuevo Queue Tree
+     */
+    public function APICreateQueueTree($params)
+    {
+        $res = (object) array();
+        
+        try {
+            // Parámetros requeridos
+            $required = ['name', 'parent', 'max-limit'];
+            foreach ($required as $param) {
+                if (!isset($params[$param]) || empty($params[$param])) {
+                    $res->success = false;
+                    $res->error = "Parámetro requerido faltante: $param";
+                    return $res;
+                }
+            }
+            
+            // Construir body para la petición
+            $body = (object) array();
+            
+            // Parámetros básicos
+            $body->name = $params['name'];
+            $body->parent = $params['parent'];
+            $body->{'max-limit'} = $params['max-limit'];
+            
+            // Parámetros opcionales
+            if (isset($params['burst-limit'])) $body->{'burst-limit'} = $params['burst-limit'];
+            if (isset($params['burst-threshold'])) $body->{'burst-threshold'} = $params['burst-threshold'];
+            if (isset($params['burst-time'])) $body->{'burst-time'} = $params['burst-time'];
+            if (isset($params['priority'])) $body->priority = $params['priority'];
+            if (isset($params['queue-type'])) $body->{'queue-type'} = $params['queue-type'];
+            if (isset($params['packet-mark'])) $body->{'packet-mark'} = $params['packet-mark'];
+            if (isset($params['connection-mark'])) $body->{'connection-mark'} = $params['connection-mark'];
+            if (isset($params['dscp'])) $body->dscp = $params['dscp'];
+            if (isset($params['comment'])) $body->comment = $params['comment'];
+            
+            $result = $this->RequestBuilder("queue/tree", "POST", $body, ["Content-Type: application/json"]);
+            
+            if ($result->success) {
+                $res->success = true;
+                $res->data = $result->data;
+                $res->message = "Queue Tree creado exitosamente";
+            } else {
+                $res->success = false;
+                $res->error = $result->error ?? "Error al crear Queue Tree";
+            }
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        
+        return $res;
+    }
+    
+    /**
+     * Actualizar Queue Tree existente
+     */
+    public function APIUpdateQueueTree($queue_id, $params)
+    {
+        $res = (object) array();
+        
+        try {
+            $body = (object) array();
+            
+            // Solo incluir parámetros que se van a actualizar
+            if (isset($params['name'])) $body->name = $params['name'];
+            if (isset($params['parent'])) $body->parent = $params['parent'];
+            if (isset($params['max-limit'])) $body->{'max-limit'} = $params['max-limit'];
+            if (isset($params['burst-limit'])) $body->{'burst-limit'} = $params['burst-limit'];
+            if (isset($params['burst-threshold'])) $body->{'burst-threshold'} = $params['burst-threshold'];
+            if (isset($params['burst-time'])) $body->{'burst-time'} = $params['burst-time'];
+            if (isset($params['priority'])) $body->priority = $params['priority'];
+            if (isset($params['queue-type'])) $body->{'queue-type'} = $params['queue-type'];
+            if (isset($params['packet-mark'])) $body->{'packet-mark'} = $params['packet-mark'];
+            if (isset($params['connection-mark'])) $body->{'connection-mark'} = $params['connection-mark'];
+            if (isset($params['dscp'])) $body->dscp = $params['dscp'];
+            if (isset($params['comment'])) $body->comment = $params['comment'];
+            if (isset($params['disabled'])) $body->disabled = $params['disabled'];
+            
+            $result = $this->RequestBuilder("queue/tree/$queue_id", "PATCH", $body, ["Content-Type: application/json"]);
+            
+            if ($result->success) {
+                $res->success = true;
+                $res->data = $result->data;
+                $res->message = "Queue Tree actualizado exitosamente";
+            } else {
+                $res->success = false;
+                $res->error = $result->error ?? "Error al actualizar Queue Tree";
+            }
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        
+        return $res;
+    }
+    
+    /**
+     * Eliminar Queue Tree
+     */
+    public function APIDeleteQueueTree($queue_id)
+    {
+        $res = (object) array();
+        
+        try {
+            $result = $this->RequestBuilder("queue/tree/$queue_id", "DELETE");
+            
+            if ($result->success) {
+                $res->success = true;
+                $res->message = "Queue Tree eliminado exitosamente";
+            } else {
+                $res->success = false;
+                $res->error = $result->error ?? "Error al eliminar Queue Tree";
+            }
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        
+        return $res;
+    }
+    
+    /**
+     * Crear Queue Tree para cliente específico
+     */
+    public function APICreateClientQueueTree($client_ip, $upload_limit, $download_limit, $options = [])
+    {
+        $res = (object) array();
+        
+        try {
+            // Nombre único para el queue del cliente
+            $queue_name = "client-" . str_replace(['.', ':'], '-', $client_ip);
+            $parent_interface = $options['parent_interface'] ?? 'global';
+            
+            // Parámetros del Queue Tree
+            $params = [
+                'name' => $queue_name,
+                'parent' => $parent_interface,
+                'max-limit' => $upload_limit . "/" . $download_limit,
+                'priority' => $options['priority'] ?? 4,
+                'queue-type' => $options['queue-type'] ?? 'default',
+                'comment' => "Queue para cliente IP: $client_ip"
+            ];
+            
+            // Agregar burst si está especificado
+            if (isset($options['burst_upload']) && isset($options['burst_download'])) {
+                $params['burst-limit'] = $options['burst_upload'] . "/" . $options['burst_download'];
+                $params['burst-threshold'] = $upload_limit . "/" . $download_limit;
+                $params['burst-time'] = $options['burst-time'] ?? '8s/4s';
+            }
+            
+            // Agregar packet mark si está especificado
+            if (isset($options['packet_mark'])) {
+                $params['packet-mark'] = $options['packet_mark'];
+            }
+            
+            return $this->APICreateQueueTree($params);
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        
+        return $res;
+    }
+    
+    /**
+     * Eliminar Queue Tree de cliente específico
+     */
+    public function APIDeleteClientQueueTree($client_ip)
+    {
+        $res = (object) array();
+        
+        try {
+            // Buscar el queue del cliente
+            $queue_name = "client-" . str_replace(['.', ':'], '-', $client_ip);
+            $queues = $this->APIListQueueTree();
+            
+            if ($queues->success && is_array($queues->data)) {
+                foreach ($queues->data as $queue) {
+                    if (isset($queue->name) && $queue->name === $queue_name) {
+                        return $this->APIDeleteQueueTree($queue->{'.id'});
+                    }
+                }
+            }
+            
+            $res->success = false;
+            $res->error = "Queue Tree no encontrado para cliente IP: $client_ip";
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        
+        return $res;
+    }
+    
+    /**
+     * Sincronizar múltiples Queue Trees para clientes
+     */
+    public function APISyncClientQueues($clients_data)
+    {
+        $res = (object) array();
+        $results = [];
+        
+        try {
+            foreach ($clients_data as $client) {
+                $client_ip = $client['ip'];
+                $upload = $client['upload_limit'];
+                $download = $client['download_limit'];
+                $options = $client['options'] ?? [];
+                
+                // Eliminar queue existente si existe
+                $this->APIDeleteClientQueueTree($client_ip);
+                
+                // Crear nuevo queue
+                $create_result = $this->APICreateClientQueueTree($client_ip, $upload, $download, $options);
+                $results[$client_ip] = $create_result;
+            }
+            
+            $res->success = true;
+            $res->data = $results;
+            $res->message = "Sincronización de Queue Trees completada";
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        
+        return $res;
+    }
 }

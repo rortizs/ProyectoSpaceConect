@@ -347,9 +347,27 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
                 </div>
               </div>
               <div role="tabpanel" class="tab-pane fade" id="routerLogs">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <div class="btn-group" role="group">
+                    <button type="button" id="pauseLogsBtn" class="btn btn-warning btn-sm" onclick="toggleLogUpdates()">
+                      <i class="fas fa-pause"></i> Pausar
+                    </button>
+                    <button type="button" id="refreshLogsBtn" class="btn btn-info btn-sm" onclick="fetchLogData()">
+                      <i class="fas fa-sync"></i> Actualizar
+                    </button>
+                  </div>
+                  <div>
+                    <select id="logLimitSelect" class="form-control form-control-sm" onchange="changeLogLimit()" style="width: auto; display: inline-block;">
+                      <option value="25">25 logs</option>
+                      <option value="50" selected>50 logs</option>
+                      <option value="100">100 logs</option>
+                      <option value="200">200 logs</option>
+                    </select>
+                    <span id="logCount" class="text-muted ml-2"></span>
+                  </div>
+                </div>
                 <table id="routerLogTable" class="table">
                   <tbody>
-
                   </tbody>
                 </table>
               </div>
@@ -401,17 +419,33 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
             }
           });
           $.post('<?= base_url(); ?>/network/add_router', data).done(function(data) {
-            var res = JSON.parse(data);
-            if (res.result == "success") {
-              window.location.reload();
-            } else {
+            try {
+              var res = JSON.parse(data);
+              if (res.result == "success") {
+                window.location.reload();
+              } else {
+                blockRes = false;
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error de conexión',
+                  text: res.message || 'Revisa la información de conexión del Router.',
+                });
+              }
+            } catch (e) {
               blockRes = false;
               Swal.fire({
                 icon: 'error',
-                title: 'No se pudo conectar',
-                text: 'Revisa la información de conexión del Router.',
+                title: 'Error de sesión',
+                text: 'Tu sesión ha expirado. Por favor recarga la página.',
               });
             }
+          }).fail(function() {
+            blockRes = false;
+            Swal.fire({
+              icon: 'error',
+              title: 'Error de red',
+              text: 'No se pudo enviar la petición. Verifica tu conexión.',
+            });
           });
 
         }
@@ -453,17 +487,33 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
             }
           });
           $.post('<?= base_url(); ?>/network/edit_router', data).done(function(data) {
-            var res = JSON.parse(data);
-            if (res.result == "success") {
-              window.location.reload();
-            } else {
+            try {
+              var res = JSON.parse(data);
+              if (res.result == "success") {
+                window.location.reload();
+              } else {
+                blockRes = false;
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error de conexión',
+                  text: res.message || 'Revisa la información de conexión del Router.',
+                });
+              }
+            } catch (e) {
               blockRes = false;
               Swal.fire({
                 icon: 'error',
-                title: 'No se pudo conectar',
-                text: 'Revisa la información de conexión del Router.',
+                title: 'Error de sesión',
+                text: 'Tu sesión ha expirado. Por favor recarga la página.',
               });
             }
+          }).fail(function() {
+            blockRes = false;
+            Swal.fire({
+              icon: 'error',
+              title: 'Error de red',
+              text: 'No se pudo enviar la petición. Verifica tu conexión.',
+            });
           });
 
         }
@@ -554,6 +604,8 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
   var lastReadingRx = [];
   var lastReadingTx = [];
   var logInterval = null;
+  var logsPaused = false;
+  var currentLogLimit = 50;
 
   var chartlabels = [];
   var chart0data = [];
@@ -597,9 +649,10 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
         var res = JSON.parse(data);
         if (res.result === "success") {
 
-          trafficInterval = setInterval(fetchTrafficData, 3000);
+          // Increase intervals for better performance
+          trafficInterval = setInterval(fetchTrafficData, 5000); // 5 seconds for traffic
           fetchTrafficData();
-          logInterval = setInterval(fetchLogData, 3000);
+          logInterval = setInterval(fetchLogData, 10000); // 10 seconds for logs
           fetchLogData();
         } else {
           $("#routerLogTable tbody").html('<tr><td>Could not connect!</td><td></td><td></td></tr>');
@@ -734,8 +787,14 @@ function regla_moroso(id) {
     var data = {
       id: readingRouterId
     };
-    $.post('<?= base_url(); ?>/network/router_system_interface', data).done(function(data) {
-      var res = JSON.parse(data);
+    
+    $.ajax({
+      url: '<?= base_url(); ?>/network/router_system_interface',
+      type: 'POST',
+      data: data,
+      dataType: 'json',
+      timeout: 8000, // 8 seconds timeout for interface data
+      success: function(res) {
       if (res.result == "success") {
         var rid = readingRouterId;
 
@@ -789,7 +848,20 @@ function regla_moroso(id) {
         if (chartlabels[rid].length > 0) {
           updateIntChart();
         }
+      } else {
+        console.error("Failed to fetch interface data:", res.message || 'Unknown error');
+        // Show error in chart area or interface list
+        $('#interfaceFilter').html('<option selected disabled>Error al cargar interfaces</option>');
       }
+    },
+    error: function(xhr, status, error) {
+      console.error("Error fetching traffic data:", status, error);
+      if (status === 'timeout') {
+        $('#interfaceFilter').html('<option selected disabled>Timeout - Router muy lento</option>');
+      } else {
+        $('#interfaceFilter').html('<option selected disabled>Error de conexión</option>');
+      }
+    }
     });
   }
 
@@ -810,24 +882,52 @@ function regla_moroso(id) {
   }
 
   function fetchLogData() {
+    if (logsPaused) return; // Don't fetch if paused
+    
     var data = {};
     data.id = readingRouterId;
-    $.post('<?= base_url(); ?>/network/router_system_log', data).done(function(data) {
-      var data = JSON.parse(data);
-
-      if (data.result == "success") {
-        $("#routerLogTable tbody").html(data.html);
-
-
-        var rlogs = $('#routerLogs');
-
-        if (rlogs.scrollTop() + rlogs.innerHeight() < rlogs.prop('scrollHeight') && rlogs.hasClass("initiated")) {
-
+    data.limit = currentLogLimit;
+    
+    $.ajax({
+      url: '<?= base_url(); ?>/network/router_system_log',
+      type: 'POST',
+      data: data,
+      dataType: 'json',
+      timeout: 10000, // 10 seconds timeout
+      success: function(response) {
+        if (response.result === "success") {
+          $("#routerLogTable tbody").html(response.html);
+          
+          // Update log count if provided
+          if (response.total_logs) {
+            $("#logCount").text(`(${response.total_logs} logs)`);
+          }
+          
+          var rlogs = $('#routerLogs');
+          
+          // Auto-scroll logic
+          if (rlogs.scrollTop() + rlogs.innerHeight() < rlogs.prop('scrollHeight') && rlogs.hasClass("initiated")) {
+            // User is scrolled up, don't auto-scroll
+          } else {
+            rlogs.scrollTop(rlogs.prop('scrollHeight'));
+            rlogs.addClass("initiated");
+          }
+          
         } else {
-          rlogs.scrollTop(rlogs.prop('scrollHeight'));
-          rlogs.addClass("initiated");
+          $("#routerLogTable tbody").html(`<tr><td colspan="3" class="text-center text-danger">${response.message || 'Error al cargar logs'}</td></tr>`);
         }
-
+      },
+      error: function(xhr, status, error) {
+        if (status === 'timeout') {
+          $("#routerLogTable tbody").html('<tr><td colspan="3" class="text-center text-warning">Tiempo de espera agotado. El router puede estar sobrecargado.</td></tr>');
+        } else {
+          try {
+            var response = JSON.parse(xhr.responseText);
+            $("#routerLogTable tbody").html(`<tr><td colspan="3" class="text-center text-danger">${response.message || 'Error de conexión'}</td></tr>`);
+          } catch (e) {
+            $("#routerLogTable tbody").html('<tr><td colspan="3" class="text-center text-danger">Error de red. Verifica tu conexión.</td></tr>');
+          }
+        }
       }
     });
   }
@@ -860,6 +960,37 @@ function regla_moroso(id) {
     const index = Math.floor(Math.log(speed) / Math.log(1000));
     const value = speed / Math.pow(1000, index);
     return `${value.toFixed(2)} ${units[index] !== undefined ? units[index] : ""}`;
+  }
+  
+  // Log control functions
+  function toggleLogUpdates() {
+    logsPaused = !logsPaused;
+    
+    var btn = $('#pauseLogsBtn');
+    if (logsPaused) {
+      btn.html('<i class="fas fa-play"></i> Reanudar');
+      btn.removeClass('btn-warning').addClass('btn-success');
+    } else {
+      btn.html('<i class="fas fa-pause"></i> Pausar');
+      btn.removeClass('btn-success').addClass('btn-warning');
+      // Resume and fetch immediately
+      fetchLogData();
+    }
+  }
+  
+  function changeLogLimit() {
+    currentLogLimit = parseInt($('#logLimitSelect').val());
+    if (!logsPaused) {
+      fetchLogData();
+    }
+  }
+  
+  // Performance monitoring
+  function logPerformance(operation, startTime) {
+    var duration = Date.now() - startTime;
+    if (duration > 5000) { // Log slow operations (>5 seconds)
+      console.warn(`Slow ${operation} operation: ${duration}ms`);
+    }
   }
 </script>
 <?php footer($data); ?>

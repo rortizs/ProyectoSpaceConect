@@ -505,7 +505,7 @@ CREATE TABLE `currency` (
 --
 
 INSERT INTO `currency` (`id`, `currency_iso`, `language`, `currency_name`, `money`, `money_plural`, `symbol`, `registration_date`, `state`) VALUES
-(1, 'PES', 'ES', 'PESOS COLOMBIANOS', 'PESO', 'PESOS', '$', '2022-07-07 19:57:37', 1);
+(1, 'GTQ', 'ES', 'QUETZAL GUATEMALTECO', 'QUETZAL', 'QUETZALES', 'Q', '2022-07-07 19:57:37', 1);
 
 -- --------------------------------------------------------
 

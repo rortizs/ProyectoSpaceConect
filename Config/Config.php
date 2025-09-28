@@ -1,6 +1,7 @@
 <?php
 /* RUTA DEL SISTEMA */
-const BASE_URL = "http://online.test";
+//const BASE_URL = "http://online.test"; //dominio virtual o real
+const BASE_URL = "http://localhost/internet_online"; //dominio virtual o real
 /* ZONA HORARIA*/
 date_default_timezone_set('America/Guatemala');
 const MONTHS = [
@@ -21,7 +22,8 @@ const MONTHS = [
 const DB_HOST = "localhost";
 const DB_NAME = "online"; //nombre base de datos
 const DB_USER = "root"; //usuario
-const DB_PASSWORD = "10Br3nd@10"; //contraseña
+const DB_PASSWORD = ""; //contraseña
+const DB_PORT = "3306"; //puerto
 const DB_CHARSET = "utf8";
 /* BACKUP */
 const TABLES_NAME = "Tables_in_online"; //backups - Tables_in_nombreBD
@@ -64,4 +66,3 @@ const SPM = ",";
 const ADMINISTRATOR = 1;
 const TECHNICAL = 2;
 const CHARGES = 3;
-

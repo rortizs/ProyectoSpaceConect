@@ -6,4 +6,7 @@
         if(file_exists("Models/".$class.'.php')){
             require_once("Models/".$class.'.php');
         }
+        if(file_exists("Services/".$class.'.php')){
+            require_once("Services/".$class.'.php');
+        }
     });

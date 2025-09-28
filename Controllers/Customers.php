@@ -486,6 +486,53 @@ class Customers extends Controllers
                       } else {
                         $router->APIAddPPPSecret($_POST['netName'], $_POST['netIP'], $_POST['netPassword'], $_POST['netLocalAddress']);
                       }
+                    } elseif ($r->mode == 3) {
+                      // Queue Tree mode: Create assignment and apply policy
+                      $client_ip = $_POST['netIP'];
+                      $policy_id = $_POST['queue_tree_policy'];
+                      $upload_limit = $_POST['queue_tree_upload'] ?: null;
+                      $download_limit = $_POST['queue_tree_download'] ?: null;
+                      
+                      if (!empty($policy_id)) {
+                        // Get policy details
+                        $policy_query = "SELECT * FROM queue_tree_policies WHERE id = '$policy_id'";
+                        $policy_result = sql($policy_query);
+                        
+                        if ($policy_result && mysqli_num_rows($policy_result) > 0) {
+                          $policy = mysqli_fetch_object($policy_result);
+                          
+                          // Use custom limits if provided, otherwise use policy defaults
+                          $final_upload = $upload_limit ?: ($policy->max_limit_upload ?: '5M');
+                          $final_download = $download_limit ?: ($policy->max_limit_download ?: '10M');
+                          
+                          // Create client queue assignment record
+                          $assignment_query = "INSERT INTO client_queue_assignments (
+                            client_id, queue_policy_id, client_ip, upload_limit, download_limit, 
+                            priority, status, sync_status
+                          ) VALUES (
+                            '$idcontract', '$policy_id', '$client_ip', '$final_upload', '$final_download',
+                            '{$policy->priority}', 'active', 'pending'
+                          )";
+                          
+                          if (sql($assignment_query)) {
+                            // Create client-specific queue tree in MikroTik
+                            $queue_params = [
+                              'name' => "client-" . str_replace('.', '-', $client_ip),
+                              'parent' => $policy->parent_queue ?: 'global',
+                              'max-limit' => $final_upload . "/" . $final_download,
+                              'priority' => $policy->priority ?: 4,
+                              'queue' => $policy->queue_type ?: 'default'
+                            ];
+                            
+                            $result = $router->APICreateClientQueueTree($queue_params, $client_ip);
+                            
+                            if ($result && $result->success) {
+                              // Update sync status
+                              sql("UPDATE client_queue_assignments SET sync_status = 'synced', last_sync = NOW() WHERE client_id = '$idcontract' AND queue_policy_id = '$policy_id'");
+                            }
+                          }
+                        }
+                      }
                     }
                   }
 
@@ -2863,6 +2910,70 @@ class Customers extends Controllers
                 $_POST['net_password'],
                 $_POST['net_localaddress']
               );
+            }
+          } elseif ($r->mode == 3) {
+            // Queue Tree mode: Update client queue tree configuration
+            $client_id = $clientid;
+            $client_ip = $_POST['net_ip'];
+            $policy_id = $_POST['queue_tree_policy'] ?? null;
+            $upload_limit = $_POST['queue_tree_upload'] ?? null;
+            $download_limit = $_POST['queue_tree_download'] ?? null;
+            
+            if (!empty($policy_id)) {
+              // Get policy details
+              $policy_query = "SELECT * FROM queue_tree_policies WHERE id = '$policy_id'";
+              $policy_result = sql($policy_query);
+              
+              if ($policy_result && mysqli_num_rows($policy_result) > 0) {
+                $policy = mysqli_fetch_object($policy_result);
+                
+                // Use custom limits if provided, otherwise use policy defaults
+                $final_upload = $upload_limit ?: ($policy->max_limit_upload ?: '5M');
+                $final_download = $download_limit ?: ($policy->max_limit_download ?: '10M');
+                
+                // Update or create client queue assignment
+                $existing_assignment = sql("SELECT id FROM client_queue_assignments WHERE client_id = '$client_id'");
+                
+                if (mysqli_num_rows($existing_assignment) > 0) {
+                  // Update existing assignment
+                  sql("UPDATE client_queue_assignments SET 
+                    queue_policy_id = '$policy_id', 
+                    client_ip = '$client_ip', 
+                    upload_limit = '$final_upload', 
+                    download_limit = '$final_download',
+                    priority = '{$policy->priority}',
+                    sync_status = 'pending'
+                    WHERE client_id = '$client_id'");
+                } else {
+                  // Create new assignment
+                  sql("INSERT INTO client_queue_assignments (
+                    client_id, queue_policy_id, client_ip, upload_limit, download_limit, 
+                    priority, status, sync_status
+                  ) VALUES (
+                    '$client_id', '$policy_id', '$client_ip', '$final_upload', '$final_download',
+                    '{$policy->priority}', 'active', 'pending'
+                  )");
+                }
+                
+                // Update/Create client-specific queue tree in MikroTik
+                $queue_params = [
+                  'name' => "client-" . str_replace('.', '-', $client_ip),
+                  'parent' => $policy->parent_queue ?: 'global',
+                  'max-limit' => $final_upload . "/" . $final_download,
+                  'priority' => $policy->priority ?: 4,
+                  'queue' => $policy->queue_type ?: 'default'
+                ];
+                
+                // Try to delete existing queue first
+                $router->APIDeleteClientQueueTree($client_ip);
+                // Create new queue
+                $result = $router->APICreateClientQueueTree($queue_params, $client_ip);
+                
+                if ($result && $result->success) {
+                  // Update sync status
+                  sql("UPDATE client_queue_assignments SET sync_status = 'synced', last_sync = NOW() WHERE client_id = '$client_id'");
+                }
+              }
             }
           }
 

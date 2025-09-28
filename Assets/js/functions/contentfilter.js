@@ -1,8 +1,12 @@
 // Content Filter Management JavaScript
 
-let contentFilterTable;
-let clientsTable;
-let logsTable;
+// Prevent multiple declarations
+if (typeof window.contentFilterLoaded === 'undefined') {
+    window.contentFilterLoaded = true;
+    
+var contentFilterTable;
+var clientsTable;  
+var logsTable;
 
 document.addEventListener("DOMContentLoaded", function() {
     // Initialize DataTables
@@ -52,6 +56,12 @@ function initializeForms() {
     $('#newPolicyForm').submit(function(e) {
         e.preventDefault();
         createNewPolicy();
+    });
+    
+    // Edit Policy Form
+    $('#editPolicyForm').submit(function(e) {
+        e.preventDefault();
+        updatePolicy();
     });
     
     // Apply Filter Form
@@ -111,28 +121,254 @@ function createNewPolicy() {
 }
 
 function editPolicy(policyId) {
-    // Implementation for editing policies
-    showInfo('Funcionalidad de edición en desarrollo');
+    console.log('editPolicy called with ID:', policyId);
+    console.log('base_url:', typeof base_url !== 'undefined' ? base_url : 'UNDEFINED');
+    
+    // Check if modal exists
+    if ($('#editPolicyModal').length === 0) {
+        console.error('editPolicyModal not found in DOM');
+        alert('Error: Modal de edición no encontrado');
+        return;
+    }
+    
+    // Test modal directly first
+    console.log('Attempting to show modal directly...');
+    $('#editPolicyModal').modal('show');
+    
+    // If modal shows, then load data
+    setTimeout(function() {
+        if ($('#editPolicyModal').hasClass('show')) {
+            console.log('Modal is visible, loading data...');
+            loadPolicyData(policyId);
+        } else {
+            console.error('Modal failed to show');
+            alert('Error: El modal no se puede mostrar. Verifique que Bootstrap esté cargado correctamente.');
+        }
+    }, 500);
+}
+
+function loadPolicyData(policyId) {
+    // Check if base_url is defined
+    if (typeof base_url === 'undefined') {
+        console.error('base_url is undefined');
+        alert('Error: URL base no definida');
+        return;
+    }
+    
+    console.log('Loading policy data for ID:', policyId);
+    console.log('AJAX URL:', base_url + '/network/get_policy_details');
+    
+    $.ajax({
+        url: base_url + '/network/get_policy_details',
+        type: 'POST',
+        data: { policy_id: policyId },
+        dataType: 'json', // Expect JSON response
+        success: function(response) {
+            console.log('AJAX response received:', response);
+            console.log('Response type:', typeof response);
+            
+            if (response && response.result === 'success' && response.policy) {
+                const policy = response.policy;
+                console.log('Policy data:', policy);
+                
+                // Fill form fields with validation
+                console.log('Setting policy ID:', policy.id);
+                $('#edit_policy_id').val(policy.id);
+                
+                console.log('Setting policy name:', policy.name);
+                $('#edit_policy_name').val(policy.name);
+                
+                console.log('Setting policy description:', policy.description);  
+                $('#edit_policy_description').val(policy.description);
+                
+                // Verify fields were set
+                console.log('Verification - ID field value:', $('#edit_policy_id').val());
+                console.log('Verification - Name field value:', $('#edit_policy_name').val());
+                console.log('Verification - Description field value:', $('#edit_policy_description').val());
+                
+                // Reset all checkboxes first
+                $('.edit-category-checkbox').prop('checked', false);
+                console.log('Reset all checkboxes');
+                
+                // Check selected categories
+                if (policy.selected_categories && Array.isArray(policy.selected_categories)) {
+                    console.log('Selected categories:', policy.selected_categories);
+                    policy.selected_categories.forEach(function(categoryId) {
+                        const checkboxId = '#edit_cat_' + categoryId;
+                        console.log('Checking checkbox:', checkboxId);
+                        $(checkboxId).prop('checked', true);
+                    });
+                } else {
+                    console.log('No selected categories or invalid format');
+                }
+                
+                console.log('Policy data loaded and applied successfully');
+            } else {
+                console.error('Invalid response format:', response);
+                alert('Error: Respuesta inválida del servidor - ' + (response?.message || 'formato incorrecto'));
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error details:');
+            console.error('Status:', status);
+            console.error('Error:', error);  
+            console.error('Response Text:', xhr.responseText);
+            console.error('Status Code:', xhr.status);
+            alert('Error al cargar los datos de la política: ' + error + '\nVerifica la consola para más detalles.');
+        }
+    });
+}
+
+function updatePolicy() {
+    console.log('updatePolicy called');
+    const formData = new FormData($('#editPolicyForm')[0]);
+    
+    // Debug form data
+    console.log('Form data:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+    
+    showLoader('Actualizando política...');
+    
+    console.log('Making AJAX request to:', base_url + '/network/update_policy');
+    
+    // First, let's test if we can reach a simple endpoint to check session
+    console.log('Testing session by calling get_policy_details first...');
+    
+    $.ajax({
+        url: base_url + '/network/get_policy_details',
+        type: 'POST', 
+        data: { policy_id: 1 },
+        success: function(response) {
+            console.log('Session test successful:', response);
+            proceedWithUpdate();
+        },
+        error: function(xhr, status, error) {
+            console.error('Session test failed:', status, error);
+            console.error('Response:', xhr.responseText);
+            hideLoader();
+            showError('Sesión expirada o error de permisos. Por favor recarga la página.');
+        }
+    });
+}
+
+function proceedWithUpdate() {
+    const formData = new FormData($('#editPolicyForm')[0]);
+    
+    // Debug form data
+    console.log('Form data:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+    
+    console.log('Proceeding with actual update...');
+    
+    $.ajax({
+        url: base_url + '/network/update_policy',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        // dataType: 'json', // Temporarily commented to debug
+        beforeSend: function() {
+            console.log('AJAX request starting...');
+        },
+        success: function(response) {
+            console.log('Update response received:', response);
+            console.log('Response type:', typeof response);
+            console.log('Raw response length:', response ? response.length : 'null');
+            
+            hideLoader();
+            
+            // Try to parse JSON if it's a string
+            let parsedResponse = response;
+            if (typeof response === 'string') {
+                try {
+                    parsedResponse = JSON.parse(response);
+                    console.log('Parsed JSON response:', parsedResponse);
+                } catch (e) {
+                    console.error('Failed to parse JSON:', e);
+                    console.log('Raw string response:', response);
+                }
+            }
+            
+            if (parsedResponse && parsedResponse.result === 'success') {
+                console.log('Update successful, closing modal');
+                $('#editPolicyModal').modal('hide');
+                showSuccess(parsedResponse.message || 'Política actualizada correctamente');
+                
+                // Refresh page to show updated policy
+                setTimeout(() => {
+                    console.log('Reloading page...');
+                    location.reload();
+                }, 1500);
+            } else {
+                console.log('Update failed:', parsedResponse);
+                showError(parsedResponse?.message || 'Error desconocido al actualizar la política');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Update AJAX Error:');
+            console.error('Status:', status);
+            console.error('Error:', error);
+            console.error('Response Text:', xhr.responseText);
+            console.error('Status Code:', xhr.status);
+            
+            hideLoader();
+            showError('Error al actualizar la política: ' + error);
+        },
+        complete: function() {
+            console.log('AJAX request completed');
+        }
+    });
 }
 
 function deletePolicy(policyId) {
     $.confirm({
         title: '¿Eliminar Política?',
-        content: '¿Está seguro que desea eliminar esta política de filtrado? Esta acción no se puede deshacer.',
+        content: '¿Está seguro que desea eliminar esta política de filtrado? Esta acción no se puede deshacer y se verificará que no esté en uso por algún cliente.',
         type: 'red',
         buttons: {
             confirm: {
                 text: 'Sí, Eliminar',
                 btnClass: 'btn-red',
                 action: function() {
-                    // Implementation for deleting policies
-                    showInfo('Funcionalidad de eliminación en desarrollo');
+                    executeDeletePolicy(policyId);
                 }
             },
             cancel: {
                 text: 'Cancelar',
                 btnClass: 'btn-default'
             }
+        }
+    });
+}
+
+function executeDeletePolicy(policyId) {
+    showLoader('Eliminando política...');
+    
+    $.ajax({
+        url: base_url + '/network/delete_policy',
+        type: 'POST',
+        data: { policy_id: policyId },
+        success: function(response) {
+            hideLoader();
+            
+            if (response.result === 'success') {
+                showSuccess(response.message);
+                
+                // Refresh page to remove deleted policy
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            hideLoader();
+            showError('Error al eliminar la política');
         }
     });
 }
@@ -344,6 +580,10 @@ function showInfo(message) {
 }
 
 function showLoader(message = 'Procesando...') {
+    console.log('showLoader called:', message);
+    // Remove existing loader if any
+    $('#loadingModal').remove();
+    
     $('body').append(`
         <div id="loadingModal" class="modal fade" data-backdrop="static" data-keyboard="false">
             <div class="modal-dialog modal-sm">
@@ -379,3 +619,5 @@ $(document).ready(function() {
         }, 100);
     });
 });
+
+} // End protection block

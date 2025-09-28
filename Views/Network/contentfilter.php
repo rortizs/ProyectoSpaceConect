@@ -1,5 +1,5 @@
-<?php headerAdmin($data) ?>
-<link rel="stylesheet" href="<?= media() ?>/css/jquery-confirm.min.css" />
+<?php head($data) ?>
+<link rel="stylesheet" href="<?= base_style() ?>/css/jquery-confirm.min.css" />
 
 <div class="page-header">
     <div class="page-block">
@@ -441,7 +441,62 @@
     </div>
 </div>
 
-<?php footerAdmin($data) ?>
+<!-- Edit Policy Modal -->
+<div class="modal fade" id="editPolicyModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Política de Filtrado</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="editPolicyForm">
+                <div class="modal-body">
+                    <input type="hidden" name="policy_id" id="edit_policy_id">
+                    
+                    <div class="form-group">
+                        <label for="edit_policy_name">Nombre de la Política</label>
+                        <input type="text" class="form-control" name="name" id="edit_policy_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_policy_description">Descripción</label>
+                        <textarea class="form-control" name="description" id="edit_policy_description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Categorías a Bloquear</label>
+                        <div class="row" id="edit_categories_list">
+                            <?php foreach($data['categories'] as $category): ?>
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input edit-category-checkbox" 
+                                           type="checkbox" 
+                                           name="categories[]" 
+                                           value="<?= $category['id'] ?>" 
+                                           id="edit_cat_<?= $category['id'] ?>">
+                                    <label class="form-check-label" for="edit_cat_<?= $category['id'] ?>">
+                                        <span class="badge" style="background-color: <?= $category['color'] ?>">
+                                            <?= $category['name'] ?>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Política</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-<script src="<?= media() ?>/js/jquery-confirm.min.js"></script>
-<script src="<?= media() ?>/js/functions/<?= $data['page_functions_js'] ?>"></script>
+<?php footer($data) ?>
+
+<script src="<?= base_style() ?>/js/jquery-confirm.min.js"></script>
+<script src="<?= base_style() ?>/js/functions/<?= $data['page_functions_js'] ?>"></script>

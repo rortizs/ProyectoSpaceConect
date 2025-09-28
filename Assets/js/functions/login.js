@@ -39,7 +39,7 @@ document.addEventListener(
             if (request.status == 200) {
               var objData = JSON.parse(request.responseText);
               if (objData.status == "success") {
-                window.location.reload(false);
+                window.location.href = base_url + "/dashboard";
               } else if (objData.status == "warning") {
                 alert_msg("warning", objData.msg);
                 document.querySelector("#password").value = "";
