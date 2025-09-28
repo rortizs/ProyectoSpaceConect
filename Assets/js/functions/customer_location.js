@@ -124,8 +124,8 @@ function trace_route() {
       },
       function () {
         var start = new google.maps.LatLng(
-          -8.381723950980284,
-          -74.54314678745268
+          14.80433464050293,
+          -90.27885437011719
         );
         var end = new google.maps.LatLng(lat_client, lng_client);
 

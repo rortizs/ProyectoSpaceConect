@@ -1,6 +1,6 @@
 document.write(`<script src="https://maps.googleapis.com/maps/api/js?libraries=places,geometry&key=${key_google}&callback=initMap"></script>`);
 function initMap(){
-  var myLatlng = new google.maps.LatLng(0.0, -0.0);
+  var myLatlng = new google.maps.LatLng(14.80433464050293, -90.27885437011719);
   var infowindow = null;
   var mapOptions = {center:myLatlng,zoom:15,mapTypeId:google.maps.MapTypeId.ROADMAP};
   var map = new google.maps.Map(document.getElementById("customer_map"),mapOptions);

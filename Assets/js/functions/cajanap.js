@@ -276,8 +276,8 @@ function initMap(tipo = "nap") {
   const latitud = $("#latitud").val();
   const longitud = $("#longitud").val();
   latLng = new google.maps.LatLng(
-    latitud || -8.381723950980284,
-    longitud || -74.54314678745268
+    latitud || 14.80433464050293,
+    longitud || -90.27885437011719
   );
   map = new google.maps.Map(document.getElementById("locations"), {
     zoom: 16,
@@ -327,8 +327,8 @@ function initMap(tipo = "nap") {
         },
         function () {
           latLng = new google.maps.LatLng(
-            -8.381723950980284,
-            -74.54314678745268
+            14.80433464050293,
+            -90.27885437011719
           );
 
           marker = new google.maps.Marker({

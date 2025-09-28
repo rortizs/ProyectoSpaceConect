@@ -10,7 +10,7 @@ function initMap() {
     puertos: $("#puertos").val(),
     detalles: $("#detalles").val(),
   };
-  var myLatlng = new google.maps.LatLng(0.0, -0.0);
+  var myLatlng = new google.maps.LatLng(14.80433464050293, -90.27885437011719);
   var infowindow = null;
   var mapOptions = {
     center: myLatlng,

@@ -1154,7 +1154,7 @@ function open_map() {
 }
 
 function initMap() {
-  latLng = new google.maps.LatLng(-8.381723950980284, -74.54314678745268);
+  latLng = new google.maps.LatLng(14.80433464050293, -90.27885437011719);
   map = new google.maps.Map(document.getElementById("locations"), {
     zoom: 16,
     mapTypeId: google.maps.MapTypeId.ROADMAP,
@@ -1197,8 +1197,8 @@ function initMap() {
         },
         function () {
           latLng = new google.maps.LatLng(
-            -8.381723950980284,
-            -74.54314678745268
+            14.80433464050293,
+            -90.27885437011719
           );
 
           marker = new google.maps.Marker({
