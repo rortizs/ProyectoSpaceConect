@@ -171,67 +171,23 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
 </div>
 <div id="modal-add" class="modal fade p-0" role="dialog" style="display: none;">
   <form autocomplete="off" name="addRouterForm" id="addRouterForm">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-md">
       <div class="modal-content">
         <div class="modal-header">
           <h6 class="modal-title text-uppercase" id="text-ticket">Agregar router</h6>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         </div>
         <div class="modal-body">
-          <b>Información General</b><br><br>
           <div class="row">
-            <div class="col-md-8 form-group">
+            <div class="col-md-12 form-group">
               <label class="control-label">Descripción*</label>
-              <input type="text" class="form-control" id="routerAddDescription" maxlength="60">
-            </div>
-            <div class="col-md-4 form-group">
-              <label class="control-label">Modo de asignación*</label>
-              <select class="form-control" id="routerAddZone" style="width: 130px">
-                <?php
-                $first = true;
-                foreach ($data['zones'] as $k => $z) {
-                  $z = (object) $z;
-                ?>
-                  <option value="<?= $z->id ?>" <?= ($first ? "selected" : "") ?>><?= $z->name ?></option>
-                <?php
-                  $first = false;
-                }
-                ?>
-              </select>
-            </div>
-          </div>
-          <hr>
-          <b>Conexión</b><br><br>
-          <div class="row">
-            <div class="col-md-4 form-group">
-              <label class="control-label">IP*</label>
-              <input type="text" class="form-control" id="routerAddIP" maxlength="30" style="width:100%;">
-            </div>
-            <div class="col-md-2 form-group">
-              <label class="control-label">Puerto*</label>
-              <input type="text" class="form-control" name="routerAddPort" id="routerAddPort" maxlength="6" style="width:100%;">
-            </div>
-            <div class="col-md-3 form-group">
-              <label class="control-label">Usuario*</label>
-              <input type="text" class="form-control" name="routerAddUser" id="routerAddUser" maxlength="60" style="width:100%;">
-            </div>
-            <div class="col-md-3 form-group">
-              <label class="control-label">Contraseña*</label>
-              <div class="input-append input-group"><input type="password" class="form-control" id="routerAddPass" name="routerAddPass" data-placement="after" required=""><span tabindex="100" title="Mostrar/ocultar contraseña" class="add-on input-group-addon toggle-password" style="cursor: pointer;"><i class="icon-eye-open glyphicon far fa-eye-slash"></i></span></div>
-            </div>
-          </div>
-          <hr>
-          <b>Configuración de IPv4</b><br><br>
-          <div class="row">
-            <div class="col-md-12">
-            <label class="control-label">Rango de IP* <mark>EJEMPLO: 192.168.1.1/24 (ip utilizables 2 HASTA 253)</mark></label> 
-              <textarea class="form-control" name="routerAddIPRange" id="routerAddIPRange" maxlength="100" rows="6" style="width: 100%;"></textarea>
+              <input type="text" class="form-control" id="routerAddDescription" maxlength="60" placeholder="Ingrese la descripción del router">
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-white" data-dismiss="modal"></i>Cerrar</button>
-          <button type="submit" class="btn btn-blue"><i class="fas fa-save mr-2"></i><span id="text-button-ticket"></span></button>
+          <button type="button" class="btn btn-white" data-dismiss="modal">Cerrar</button>
+          <button type="submit" class="btn btn-blue"><i class="fas fa-save mr-2"></i>Guardar</button>
         </div>
       </div>
     </div>
@@ -239,68 +195,24 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
 </div>
 <div id="modal-edit" class="modal fade p-0" role="dialog" style="display: none;">
   <form autocomplete="off" name="editRouterForm" id="editRouterForm">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-md">
       <div class="modal-content">
         <div class="modal-header">
-          <h6 class="modal-title text-uppercase" id="text-ticket">Agregar router</h6>
+          <h6 class="modal-title text-uppercase" id="text-ticket">Editar router</h6>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         </div>
         <div class="modal-body">
-          <b>Información General</b><br><br>
           <div class="row">
             <input type="hidden" class="form-control" id="routerEditID" maxlength="60">
-            <div class="col-md-8 form-group">
+            <div class="col-md-12 form-group">
               <label class="control-label">Descripción*</label>
-              <input type="text" class="form-control" id="routerEditDescription" maxlength="60">
-            </div>
-            <div class="col-md-4 form-group">
-              <label class="control-label">Modo de asignación*</label>
-              <select class="form-control" id="routerEditZone" style="width: 130px">
-                <?php
-                $first = true;
-                foreach ($data['zones'] as $k => $z) {
-                  $z = (object) $z;
-                ?>
-                  <option value="<?= $z->id ?>" <?= ($first ? "selected" : "") ?>><?= $z->name ?></option>
-                <?php
-                  $first = false;
-                }
-                ?>
-              </select>
-            </div>
-          </div>
-          <hr>
-          <b>Conexión</b><br><br>
-          <div class="row">
-            <div class="col-md-4 form-group">
-              <label class="control-label">IP*</label>
-              <input type="text" class="form-control" id="routerEditIP" maxlength="30" style="width:100%;">
-            </div>
-            <div class="col-md-2 form-group">
-              <label class="control-label">Puerto*</label>
-              <input type="text" class="form-control" name="routerEditPort" id="routerEditPort" maxlength="6" style="width:100%;">
-            </div>
-            <div class="col-md-3 form-group">
-              <label class="control-label">Usuario*</label>
-              <input type="text" class="form-control" name="routerEditUser" id="routerEditUser" maxlength="60" style="width:100%;">
-            </div>
-            <div class="col-md-3 form-group">
-              <label class="control-label">Contraseña*</label>
-              <div class="input-append input-group"><input type="password" class="form-control" id="routerEditPass" name="routerEditPass" data-placement="after" required=""><span tabindex="100" title="Mostrar/ocultar contraseña" class="add-on input-group-addon toggle-password" style="cursor: pointer;"><i class="icon-eye-open glyphicon far fa-eye-slash"></i></span></div>
-            </div>
-          </div>
-          <hr>
-          <b>Configuración</b><br><br>
-          <div class="row">
-            <div class="col-md-12">
-            <label class="control-label">Rango de IP* <mark>EJEMPLO: 192.168.1.1/24 (ip utilizables 2 HASTA 253)</mark></label> 
-              <textarea class="form-control" name="routerEditIPRange" id="routerEditIPRange" maxlength="100" rows="6" style="width: 100%;"></textarea>
+              <input type="text" class="form-control" id="routerEditDescription" maxlength="60" placeholder="Ingrese la descripción del router">
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-white" data-dismiss="modal"></i>Cerrar</button>
-          <button type="submit" class="btn btn-blue"><i class="fas fa-save mr-2"></i><span id="text-button-ticket"></span></button>
+          <button type="button" class="btn btn-white" data-dismiss="modal">Cerrar</button>
+          <button type="submit" class="btn btn-blue"><i class="fas fa-save mr-2"></i>Actualizar</button>
         </div>
       </div>
     </div>
@@ -403,12 +315,6 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
           var data = {};
 
           data.name = $("#routerAddDescription").val();
-          data.ip = $("#routerAddIP").val();
-          data.port = $("#routerAddPort").val();
-          data.username = $("#routerAddUser").val();
-          data.password = $("#routerAddPass").val();
-          data.ip_range = $("#routerAddIPRange").val();
-          data.zoneid = $("#routerAddZone").val();
 
           Swal.fire({
             title: 'Por favor espere...',
@@ -471,12 +377,6 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
 
           data.id = $("#routerEditID").val();
           data.name = $("#routerEditDescription").val();
-          data.ip = $("#routerEditIP").val();
-          data.port = $("#routerEditPort").val();
-          data.username = $("#routerEditUser").val();
-          data.password = $("#routerEditPass").val();
-          data.ip_range = $("#routerEditIPRange").val();
-          data.zoneid = $("#routerEditZone").val();
 
           Swal.fire({
             title: 'Por favor espere...',
@@ -556,12 +456,6 @@ $status_spanish["DISCONNECTED"] = "DESCONECTADO";
       var res = JSON.parse(data);
       $("#routerEditID").val(id);
       $("#routerEditDescription").val(res.data.name);
-      $("#routerEditIP").val(res.data.ip);
-      $("#routerEditPort").val(res.data.port);
-      $("#routerEditUser").val(res.data.username);
-      $("#routerEditPass").val(atob(res.data.password));
-      $("#routerEditIPRange").val(res.data.ip_range);
-      $("#routerEditZone").val(res.data.zoneid);
       $('#modal-edit').modal('show');
     });
   }

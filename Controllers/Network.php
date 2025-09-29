@@ -116,68 +116,51 @@ class Network extends Controllers
         }
         $res = (object) array();
 
-        if (!empty($_POST['name']) && !empty($_POST['ip']) && !empty($_POST['port']) && !empty($_POST['username']) && !empty($_POST['password'])) {
-
+        if (!empty($_POST['name'])) {
             try {
-                require_once('Libraries/MikroTik/RouterFactory.php');
+                $item = (object) array();
+                $item->name = $_POST['name'];
+                
+                // Set default values for simplified router
+                $item->ip = '0.0.0.0';
+                $item->port = 8728;
+                $item->username = 'admin';
+                $item->password = encrypt_aes('admin', SECRET_IV);
+                $item->ip_range = '192.168.1.1/24';
+                $item->zoneid = 1; // Default zone
+                $item->routeros_version = 'Unknown';
+                $item->api_type = 'auto';
+                $item->board_name = 'Router Simplificado';
+                $item->status = 'active';
 
-                // Use hybrid system to detect router type and connect
-                $router_info = RouterFactory::getRouterInfo(
-                    $_POST['ip'],
-                    intval($_POST['port']),
-                    $_POST['username'],
-                    $_POST['password']
-                );
+                // Use direct SQL insert with simplified fields
+                $insert_sql = "INSERT INTO network_routers (name, ip, port, username, password, ip_range, zoneid, routeros_version, api_type, board_name, status, identity, version) VALUES (
+                    '{$item->name}',
+                    '{$item->ip}',
+                    {$item->port},
+                    '{$item->username}',
+                    '{$item->password}',
+                    '{$item->ip_range}',
+                    {$item->zoneid},
+                    '{$item->routeros_version}',
+                    '{$item->api_type}',
+                    '{$item->board_name}',
+                    '{$item->status}',
+                    '{$item->board_name}',
+                    '{$item->routeros_version}'
+                )";
+                
+                sql($insert_sql);
 
-                if ($router_info['connected']) {
-                    $item = (object) array();
-                    $item->name = $_POST['name'];
-                    $item->ip = $_POST['ip'];
-                    $item->port = $_POST['port'];
-                    $item->username = $_POST['username'];
-                    $item->password = encrypt_aes($_POST['password'], SECRET_IV);
-                    $item->ip_range = $_POST['ip_range'];
-                    $item->zoneid = $_POST['zoneid'];
-                    
-                    // Add detected router information
-                    $item->routeros_version = $router_info['version'];
-                    $item->api_type = $router_info['api_type'];
-                    $item->board_name = $router_info['board_name'] ?? '';
-                    $item->status = 'connected';
-
-                    // Use direct SQL insert to avoid field issues
-                    $insert_sql = "INSERT INTO network_routers (name, ip, port, username, password, ip_range, zoneid, routeros_version, api_type, board_name, status, identity, version) VALUES (
-                        '{$item->name}',
-                        '{$item->ip}',
-                        {$item->port},
-                        '{$item->username}',
-                        '{$item->password}',
-                        '{$item->ip_range}',
-                        {$item->zoneid},
-                        '{$item->routeros_version}',
-                        '{$item->api_type}',
-                        '{$item->board_name}',
-                        '{$item->status}',
-                        '{$item->board_name}',
-                        '{$item->routeros_version}'
-                    )";
-                    
-                    sql($insert_sql);
-
-                    $res->result = "success";
-                    $res->message = "Router agregado correctamente";
-                    $res->router_info = $router_info;
-                } else {
-                    $res->result = "failed";
-                    $res->message = "No se pudo conectar al router: " . ($router_info['error'] ?? 'Error desconocido');
-                }
+                $res->result = "success";
+                $res->message = "Router agregado correctamente";
             } catch (Exception $e) {
                 $res->result = "failed";
-                $res->message = "Error al conectar con el router: " . $e->getMessage();
+                $res->message = "Error al agregar el router: " . $e->getMessage();
             }
         } else {
             $res->result = "failed";
-            $res->message = "Invalid request";
+            $res->message = "El nombre del router es requerido";
         }
 
         header('Content-Type: application/json');
@@ -230,87 +213,32 @@ class Network extends Controllers
         }
         $res = (object) array();
 
-        if (!empty($_POST['id'])) {
+        if (!empty($_POST['id']) && !empty($_POST['name'])) {
 
             $r = sqlObject("SELECT * FROM network_routers WHERE id = " . $_POST['id']);
 
             if (!is_null($r->id)) {
 
                 try {
-                    require_once('Libraries/MikroTik/RouterFactory.php');
-                    
-                    // Decode password if it comes base64 encoded from frontend
-                    $password = $_POST["password"];
-                    if (base64_encode(base64_decode($password, true)) === $password) {
-                        $password = base64_decode($password);
-                    }
-                    
-                    $router = RouterFactory::create(
-                        $_POST["ip"], 
-                        $_POST["port"], 
-                        $_POST["username"], 
-                        $password,
-                        'auto'
-                    );
+                    // Only update the name field for simplified router
+                    sqlUpdate("network_routers", "name", $_POST['name'], $_POST['id']);
 
-                    if ($router && $router->connected) {
-
-                    $item = (object) array();
-
-                    if (isset($_POST['name'])) {
-                        sqlUpdate("network_routers", "name", $_POST['name'], $_POST['id']);
-                    }
-                    if (isset($_POST['ip'])) {
-                        sqlUpdate("network_routers", "ip", $_POST['ip'], $_POST['id']);
-                    }
-                    if (isset($_POST['port'])) {
-                        sqlUpdate("network_routers", "port", $_POST['port'], $_POST['id']);
-                    }
-                    if (isset($_POST['username'])) {
-                        sqlUpdate("network_routers", "username", $_POST['username'], $_POST['id']);
-                    }
-                    if (isset($_POST['password'])) {
-                        // Use the decoded password for encryption
-                        sqlUpdate("network_routers", "password", encrypt_aes($password, SECRET_IV), $_POST['id']);
-                    }
-                    if (isset($_POST['ip_range'])) {
-                        sqlUpdate("network_routers", "ip_range", $_POST['ip_range'], $_POST['id']);
-                    }
-                    if (isset($_POST['zoneid'])) {
-                        sqlUpdate("network_routers", "zoneid", $_POST['zoneid'], $_POST['id']);
-                    }
-                    
-                    // Update router information from API detection if successful connection
-                    $resources = $router->APIGetSystemResources();
-                    if ($resources && $resources->success) {
-                        if (isset($resources->data->version)) {
-                            sqlUpdate("network_routers", "routeros_version", $resources->data->version, $_POST['id']);
-                        }
-                        if (isset($resources->data->{"board-name"})) {
-                            sqlUpdate("network_routers", "board_name", $resources->data->{"board-name"}, $_POST['id']);
-                        }
-                        sqlUpdate("network_routers", "status", "connected", $_POST['id']);
-                    }
-
-                        $res->result = "success";
-                        $res->message = "Router actualizado correctamente";
-                    } else {
-                        $res->result = "failed";
-                        $res->message = "Could not connect to router.";
-                    }
+                    $res->result = "success";
+                    $res->message = "Router actualizado correctamente";
                 } catch (Exception $e) {
                     $res->result = "failed";
-                    $res->message = "Error al conectar: " . $e->getMessage();
+                    $res->message = "Error al actualizar el router: " . $e->getMessage();
                 }
             } else {
                 $res->result = "failed";
-                $res->message = "Invalid request";
+                $res->message = "Router no encontrado";
             }
         } else {
             $res->result = "failed";
-            $res->message = "Invalid request";
+            $res->message = "ID y nombre del router son requeridos";
         }
 
+        header('Content-Type: application/json');
         echo json_encode($res, JSON_UNESCAPED_UNICODE);
     }
     public function remove_router()
