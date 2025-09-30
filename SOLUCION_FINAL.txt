@@ -1,0 +1,76 @@
+===============================================
+🚀 SOLUCIÓN PARA EL PROBLEMA DE CLIENTES
+===============================================
+
+PROBLEMA: Los clientes no se guardan en el sistema
+
+CAUSA: Faltan tablas en la base de datos
+
+SOLUCIÓN: Usar el instalador automático
+
+===============================================
+📋 PASOS SÚPER SIMPLES:
+===============================================
+
+1. CREAR BASE DE DATOS VACÍA:
+   - Abrir XAMPP
+   - Ir a phpMyAdmin
+   - Crear nueva base de datos vacía
+   - Ejemplo: "spaceconnect_nuevo"
+
+2. USAR EL INSTALADOR:
+   - Ir a: http://localhost/internet_online/installer.php
+   - Seguir las 3 pantallas
+   - ¡Listo!
+
+===============================================
+📝 DATOS PARA EL INSTALADOR:
+===============================================
+
+PANTALLA 1 - Base de Datos:
+- Servidor: localhost
+- Nombre: (el que creaste)
+- Usuario: root
+- Contraseña: (vacío)
+
+PANTALLA 2 - Empresa:
+- Nombre empresa: (como quieras)
+- Usuario: admin
+- Contraseña: (la que quieras)
+- Email: (opcional)
+
+PANTALLA 3:
+- Hacer clic en "¡INSTALAR AHORA!"
+
+===============================================
+⚠️ IMPORTANTE DESPUÉS:
+===============================================
+
+1. ELIMINAR el archivo "installer.php"
+2. GUARDAR tu usuario y contraseña
+3. PROBAR agregar un cliente
+
+===============================================
+🎉 RESULTADO:
+===============================================
+
+✅ Sistema funcionando perfectamente
+✅ Clientes se guardan sin problemas
+✅ Nuevas funciones disponibles
+✅ Todo actualizado y estable
+
+===============================================
+📞 AYUDA:
+===============================================
+
+Si algo sale mal:
+- Tomar captura del error
+- Anotar en qué paso pasó
+- Contactar con esa información
+
+===============================================
+
+¡Es más fácil de lo que parece! 
+Todo toma menos de 10 minutos.
+
+===============================================
