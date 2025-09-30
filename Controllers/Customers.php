@@ -448,20 +448,36 @@ class Customers extends Controllers
 
                   ///
 
+                  // Guardar datos básicos de red (IP y AP Cliente Brand) siempre
+                  $clientid = $idclient;
+                  
+                  // Guardar IP si está presente
+                  if (!empty($_POST['netIP'])) {
+                    sqlUpdate("clients", "net_ip", $_POST['netIP'], $clientid);
+                  }
+                  
+                  // Guardar marca de AP Cliente si está presente (usando campo de texto como referencia)
+                  if (!empty($_POST['ap_cliente_brand'])) {
+                    // Nota: Guardamos la marca como texto en el campo note por ahora
+                    // Para una implementación completa, se podría crear una tabla de marcas
+                    $current_note = sqlValue("SELECT note FROM clients WHERE id = $clientid");
+                    $brand_info = "AP Cliente Brand: " . $_POST['ap_cliente_brand'];
+                    $updated_note = empty($current_note) ? $brand_info : $current_note . " | " . $brand_info;
+                    sqlUpdate("clients", "note", $updated_note, $clientid);
+                  }
+
+                  // Lógica original para routers MikroTik (solo si hay router configurado)
                   $r = isset($_POST['netRouter']) ? sqlObject("SELECT r.*, z.mode mode FROM network_routers r JOIN network_zones z ON z.id = r.zoneid WHERE r.id = " . $_POST['netRouter']) : null;
 
-                  if (!is_null($r->id)) {
+                  if (!is_null($r) && !is_null($r->id)) {
 
                     $item = (object) array();
-
-                    $clientid = $idclient;
 
                     if (!empty($_POST['netRouter'])) {
                       sqlUpdate("clients", "net_router", $_POST['netRouter'], $clientid);
                       sqlUpdate("clients", "net_name", $_POST['netName'] ?? '', $clientid);
                       sqlUpdate("clients", "net_password", encrypt_aes($_POST['netPassword'] ?? '', SECRET_IV), $clientid);
                       sqlUpdate("clients", "net_localaddress", $_POST['netLocalAddress'] ?? '', $clientid);
-                      sqlUpdate("clients", "net_ip", $_POST['netIP'] ?? '', $clientid);
                     }
                     // WISP MANAGEMENT
                     $plan = sqlObject("SELECT s.* FROM `services` s JOIN contracts c ON c.clientid = $clientid JOIN detail_contracts cd ON cd.serviceid = s.id AND cd.contractid = c.id");
@@ -2824,7 +2840,29 @@ class Customers extends Controllers
     }
     $res = (object) array();
 
-    if (!empty($_POST['clientid']) && !empty($_POST['net_router']) && !empty($_POST['net_name']) && !empty($_POST['net_ip'])) {
+    // Verificar si es modo simplificado (solo IP y marca de AP Cliente) o modo completo (con router MikroTik)
+    $simplified_mode = empty($_POST['net_router']) || empty($_POST['net_name']);
+    
+    if (!empty($_POST['clientid']) && !empty($_POST['net_ip'])) {
+      
+      if ($simplified_mode) {
+        // MODO SIMPLIFICADO: Solo guardar IP y marca de AP Cliente
+        $clientid = $this->addModifyNetAction ? $_POST['clientid'] : decrypt($_POST['clientid']);
+        
+        // Actualizar IP
+        sqlUpdate("clients", "net_ip", $_POST['net_ip'], $clientid);
+        
+        // Actualizar marca de AP Cliente si está presente
+        if (!empty($_POST['note'])) {
+          // En modo simplificado, el campo note contiene directamente la marca del AP Cliente
+          sqlUpdate("clients", "note", $_POST['note'], $clientid);
+        }
+        
+        $res->result = "success";
+        $res->message = "Información de red actualizada correctamente";
+        
+      } else if (!empty($_POST['net_router']) && !empty($_POST['net_name'])) {
+        // MODO COMPLETO: Lógica original con router MikroTik
 
       $r = sqlObject("SELECT r.*, z.mode mode FROM network_routers r JOIN network_zones z ON z.id = r.zoneid WHERE r.id = " . $_POST['net_router']);
 
@@ -2988,9 +3026,10 @@ class Customers extends Controllers
         $res->result = "failed";
         $res->message = "Invalid request";
       }
+      } // Cierre del else if para modo completo
     } else {
       $res->result = "failed";
-      $res->message = "Invalid request";
+      $res->message = "Invalid request - Missing required fields";
     }
 
     if (!$this->addModifyNetAction) {

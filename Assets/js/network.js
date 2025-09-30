@@ -1,357 +1,86 @@
-let loadingNap = { value: false };
-let loadingAp = { value: false };
+/*
+ * NETWORK.JS - VERSIÓN SIMPLIFICADA
+ * 
+ * Este archivo ha sido simplificado para mantener solo funcionalidades básicas:
+ * - Gestión de IP
+ * - Marca de AP Cliente (campo de texto simple)
+ * 
+ * FUNCIONES REMOVIDAS/DESHABILITADAS:
+ * - getRouterSelect(): Selector de routers MikroTik
+ * - getPasswordInput(): Gestión de contraseñas PPPoE
+ * - getApClientContent(): Búsqueda avanzada de AP Clientes
+ * - changeTogglePassword(): Toggle de visibilidad de contraseña
+ * - changeRouter(): Cambio de router y carga de datos relacionados
+ * - searchRouters(): Búsqueda de routers disponibles
+ * - searchApCliente(): Búsqueda de AP Clientes en base de datos
+ * - searchNapCliente(): Búsqueda de Cajas NAP
+ * - networkModes: Array de modos de red (DHCP, PPPoE, etc.)
+ * - clearInput(): Limpieza de campos de entrada
+ * - refreshPassword(): Generación automática de contraseñas
+ * - Queue Tree functions: Gestión de QoS y políticas de ancho de banda
+ * 
+ * Para reactivar estas funciones, restaure el archivo original desde Git y 
+ * asegúrese de que los controladores correspondientes estén disponibles.
+ */
+
+// Simplified network.js for basic IP and AP Client Brand functionality
+
+function getIpInput() {
+  return $("#netIP");
+}
+
+function getApClientBrandInput() {
+  return $("#ap_cliente_brand");
+}
+
+// Funciones getter para elementos de red
+function getZonaNameInput() {
+  return $("#netName");
+}
 
 function getRouterSelect() {
   return $("#netRouter");
-}
-
-function getNetNameId() {
-  return $("#netNameId");
-}
-
-function getZonaInput() {
-  return $("#netZone");
-}
-
-function getZonaNameInput() {
-  return $("#netName");
 }
 
 function getPasswordInput() {
   return $("#netPassword");
 }
 
-function getIpInput() {
-  return $("#netIP");
-}
-
 function getLocalAddressInput() {
   return $("#netLocalAddress");
 }
 
-function getIPPickerModal() {
-  return $("#IPPicker");
+function getNapClientLabel() {
+  return $("#nap_cliente_nombre");
 }
 
-function getIPList() {
-  return $("#ip-options-list");
-}
-
-function getTogglePassword() {
-  return $(".toggle-password");
-}
-
-function getRefreshPassword() {
-  return $(".refresh-password");
-}
-
-function getApClientContent() {
-  return $("#content-ap_cliente_id");
-}
-
-function getApClientValue() {
-  return $("#ap_cliente_value");
+function getNapClientValue() {
+  return $("#nap_cliente_id");
 }
 
 function getApClientLabel() {
   return $("#ap_cliente_id");
 }
 
-function getNapClientContent() {
-  return $("#content-nap_cliente_id");
+function getApClientValue() {
+  return $("#ap_cliente_value");
 }
 
-function getNapClientValue() {
-  return $("#nap_cliente_value");
+function getNetNameId() {
+  return $("#netNameId");
 }
 
-function getNapClientLabel() {
-  return $("#nap_cliente_id");
-}
-
-function getQueueTreeContent() {
-  return $("#content-queue_tree");
-}
-
-function getQueueTreeSelect() {
-  return $("#queue_tree_policy");
-}
-
-function getQueueTreeUpload() {
-  return $("#queue_tree_upload");
-}
-
-function getQueueTreeDownload() {
-  return $("#queue_tree_download");
-}
-
-function getQueueTreeLimitsContent() {
-  return $("#content-queue_tree_limits");
-}
-
-function networkModes() {
-  return [
-    { mode: 1, title: "Nombre Simple Queue", type: "ap_client" },
-    { mode: 2, title: "Nombre Secret PPPoE", type: "nap_client" },
-    { mode: 3, title: "Política Queue Tree", type: "queue_tree" },
+// Función para encontrar modos de red
+function findNetworkMode(modeId) {
+  // Modos de red básicos
+  const networkModes = [
+    { id: "1", type: "dhcp", name: "DHCP" },
+    { id: "2", type: "pppoe", name: "PPPoE" },
+    { id: "3", type: "nap_client", name: "NAP Cliente" },
+    { id: "4", type: "ap_client", name: "AP Cliente" }
   ];
-}
-
-function findNetworkMode(id) {
-  return networkModes().find((item) => item.mode == id);
-}
-
-function searchRouters(serviceId) {
-  const select = getRouterSelect();
-  let urlLink = `${base_url}/customers/customer_plan_routers`;
-
-  if (serviceId) {
-    urlLink = `${urlLink}/${serviceId}`;
-  }
-
-  select.empty();
-  select.append(
-    `<option value="" disabled selected>Obteniendo lista...</option>`
-  );
-
-  return axios.get(urlLink).then(({ data }) => {
-    select.empty();
-    data.forEach((item, index) => {
-      select.append(
-        `<option 
-          value="${item.id}" 
-          data-zone-name="${item.zone_name}" 
-          data-mode="${item.zone_mode}"
-        >
-          ${item.name}
-        </option>`
-      );
-
-      if (index == 0) {
-        select.val(item.id).trigger("change");
-      }
-    });
-  });
-}
-
-function searchIp(isShow = true, querySearch) {
-  if (isShow) {
-    getIPPickerModal().modal("show");
-  }
-
-  getIPList().find("li").remove();
-  getIPList().append(
-    `<li class='list-group-item disabled'>Obteniendo lista...</li>`
-  );
-
-  const form = new FormData();
-  form.append("id", getRouterSelect().val());
-
-  if (querySearch) {
-    form.append("querySearch", querySearch);
-  }
-
-  axios
-    .post(`${base_url}/network/router_available_ips`, form)
-    .then(({ data }) => {
-      getIPList().find("li").remove();
-      // validar si no es array
-      if (!Array.isArray(data)) {
-        data = Object.values(data);
-      }
-      // agregar li
-      data.forEach((item) => {
-        getIPList().append(`
-          <li class="list-group-item">
-            <a href='#'>${item}</a>
-          </li>
-        `);
-      });
-      // filtrar li
-      getIPList()
-        .find("li:not(.disabled) a")
-        .on("click", function () {
-          const selected = $(this).text();
-          getIpInput().val(selected);
-          const arrayIp = selected.split(".");
-          arrayIp.pop();
-          arrayIp.push("1");
-          getLocalAddressInput().val(arrayIp.join("."));
-          getIPPickerModal().modal("hide");
-        });
-    });
-}
-
-function search_nap_cliente() {
-  searchComponent("nap_cliente_id", "nap", loadingNap)
-    .then(
-      ({
-        input,
-        value,
-        renderNotFound,
-        renderItem,
-        closeContainer,
-        clearBox,
-        closeEvent,
-      }) => {
-        const url = `${base_url}/cajaNap/search_puertos?querySearch=${value}`;
-
-        const actionItem = (input, item) => {
-          input.value = item.nombre;
-          $("#nap_cliente_value").val(item.id);
-          closeContainer();
-        };
-
-        axios
-          .get(url)
-          .then(({ data }) => {
-            if (!data.length) throw new Error();
-            clearBox();
-            data.forEach((ap) => {
-              const item = renderItem(ap.nombre);
-              item.id = `ap-${ap.id}`;
-              item.onclick = () => actionItem(input, ap);
-            });
-          })
-          .catch(() => renderNotFound())
-          .finally(() => closeEvent());
-      }
-    )
-    .catch((err) => alert_msg("warning", err.message));
-}
-
-function search_ap_cliente() {
-  searchComponent("ap_cliente_id", "apcliente", loadingAp)
-    .then(
-      ({
-        input,
-        value,
-        renderNotFound,
-        renderItem,
-        closeContainer,
-        clearBox,
-        closeEvent,
-      }) => {
-        const url = `${base_url}/apclientes/list_records?querySearch=${value}`;
-
-        const actionItem = (input, item) => {
-          input.value = item.nombre;
-          $("#ap_cliente_value").val(item.id);
-          closeContainer();
-        };
-
-        axios
-          .get(url)
-          .then(({ data }) => {
-            if (!data.length) throw new Error();
-            clearBox();
-            data.forEach((ap) => {
-              const item = renderItem(ap.nombre);
-              item.id = `ap-${ap.id}`;
-              item.onclick = () => actionItem(input, ap);
-            });
-          })
-          .catch(() => renderNotFound())
-          .finally(() => closeEvent());
-      }
-    )
-    .catch((err) => alert_msg("warning", err.message));
-}
-
-function clearInput() {
-  getPasswordInput().parent().parent().parent().hide();
-  getLocalAddressInput().parent().parent().hide();
-}
-
-function changeRouter() {
-  getRouterSelect().change(function () {
-    const selected = $(this).find("option:selected");
-    getZonaInput().val(selected.data("zone-name"));
-    getIpInput().val("");
-    getLocalAddressInput().val("");
-
-    const mode = findNetworkMode(selected.data("mode"));
-    if (!mode) return;
-
-    getZonaNameInput().parent().siblings("label").text(mode.title);
-    const parenPassword = getPasswordInput().parent().parent().parent();
-    const parentLocal = getLocalAddressInput().parent().parent();
-
-    if (mode.type == "nap_client") {
-      parenPassword.show();
-      parentLocal.show();
-      getNapClientContent().show();
-      getApClientContent().hide();
-      getQueueTreeContent().hide();
-      getQueueTreeLimitsContent().hide();
-      getApClientValue().val(null);
-      getApClientLabel().val(null);
-      getQueueTreeSelect().val(null);
-    } else if (mode.type == "queue_tree") {
-      parenPassword.hide();
-      parentLocal.hide();
-      getNapClientContent().hide();
-      getApClientContent().hide();
-      getQueueTreeContent().show();
-      getQueueTreeLimitsContent().show();
-      getNapClientValue().val(null);
-      getNapClientLabel().val(null);
-      getApClientValue().val(null);
-      getApClientLabel().val(null);
-      // Load Queue Tree policies for this router
-      loadQueueTreePolicies(selected.val());
-    } else {
-      parenPassword.hide();
-      parentLocal.hide();
-      getNapClientContent().hide();
-      getApClientContent().show();
-      getQueueTreeContent().hide();
-      getQueueTreeLimitsContent().hide();
-      getNapClientValue().val(null);
-      getNapClientLabel().val(null);
-      getQueueTreeSelect().val(null);
-    }
-
-    getNetNameId().val(mode.mode).trigger("change");
-  });
-}
-
-function changeTogglePassword() {
-  getTogglePassword().click(function () {
-    const input = $(this).siblings("input");
-    if (input.attr("type") == "text") {
-      input.attr("type", "password");
-      $(this)
-        .find("i")
-        .removeClass("icon-eye-slash-open")
-        .addClass("icon-eye-open");
-    } else {
-      input.attr("type", "text");
-      $(this)
-        .find("i")
-        .addClass("icon-eye-slash-open")
-        .removeClass("icon-eye-open");
-    }
-  });
-}
-
-function generatePassword(length, useUppercase, useNumbers, useSpecialChars) {
-  let chars = "abcdefghijklmnopqrstuvwxyz";
-  if (useUppercase) chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  if (useNumbers) chars += "0123456789";
-  if (useSpecialChars) chars += "!@#$%^&*()_+~`|}{[]:;?><,./-=";
-
-  let password = "";
-  for (var i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-
-  return password;
-}
-
-function refreshPassword() {
-  const value = generatePassword(16, true, true, false);
-  getPasswordInput().val(value);
+  
+  return networkModes.find(mode => mode.id === modeId);
 }
 
 function loadComponentNetwork(id = "network_mount", serviceId) {
@@ -361,70 +90,128 @@ function loadComponentNetwork(id = "network_mount", serviceId) {
       .then(({ data }) => {
         const root = document.getElementById(id);
         root.innerHTML = data;
-        clearInput();
-        changeTogglePassword();
-        changeRouter();
-        searchRouters(serviceId).then(() => {
-          resolve(root);
-        });
+        
+        // Cargar datos existentes del cliente si están disponibles
+        loadExistingNetworkData();
+        
+        resolve(root);
       })
       .catch(reject);
   });
 }
 
-function loadComponentIP(id = "network_ip_mount") {
-  axios
-    .get(`${base_url}/network/network_ip_template`)
-    .then(({ data }) => {
-      const root = document.getElementById(id);
-      root.innerHTML = data;
-      document
-        .getElementById("search-input")
-        .addEventListener("keyup", function () {
-          const querySearch = $(this).val();
-          searchIp(false, querySearch);
-        });
-    })
-    .catch(console.error);
+/**
+ * Carga los datos de red existentes del cliente en el formulario
+ */
+function loadExistingNetworkData() {
+  try {
+    // Obtener datos del cliente desde el elemento clientData
+    const clientDataElement = document.getElementById('clientData');
+    if (!clientDataElement) {
+      console.log('No se encontraron datos del cliente');
+      return;
+    }
+    
+    const clientData = JSON.parse(clientDataElement.textContent);
+    console.log('Datos del cliente cargados:', clientData);
+    
+    // Cargar IP del cliente
+    const netIPField = document.getElementById('netIP');
+    if (netIPField && clientData.net_ip) {
+      netIPField.value = clientData.net_ip;
+      console.log('IP cargada:', clientData.net_ip);
+    }
+    
+    // Cargar marca AP Cliente desde el campo note (donde se guarda en modo simplificado)
+    const apClienteBrandField = document.getElementById('ap_cliente_brand');
+    if (apClienteBrandField) {
+      // En modo simplificado, la marca del AP se guarda en el campo note
+      if (clientData.note && clientData.note.trim() !== '') {
+        apClienteBrandField.value = clientData.note;
+        console.log('Marca AP Cliente cargada desde note:', clientData.note);
+      }
+      // También verificar si hay datos en ap_cliente_nombre o nap_cliente_nombre
+      else if (clientData.ap_cliente_nombre && clientData.ap_cliente_nombre.trim() !== '') {
+        apClienteBrandField.value = clientData.ap_cliente_nombre;
+        console.log('Marca AP Cliente cargada desde ap_cliente_nombre:', clientData.ap_cliente_nombre);
+      }
+      else if (clientData.nap_cliente_nombre && clientData.nap_cliente_nombre.trim() !== '') {
+        apClienteBrandField.value = clientData.nap_cliente_nombre;
+        console.log('Marca AP Cliente cargada desde nap_cliente_nombre:', clientData.nap_cliente_nombre);
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error al cargar datos de red existentes:', error);
+  }
 }
 
-// Load Queue Tree policies for selected router
-function loadQueueTreePolicies(routerId) {
-  if (!routerId) return;
-  
-  const select = getQueueTreeSelect();
-  select.empty().append('<option value="">Cargando políticas...</option>');
-  
-  $.ajax({
-    url: `${base_url}/queuetree/getPolicies`,
-    type: 'POST',
-    data: { router_id: routerId },
-    dataType: 'json',
-    success: function(response) {
-      select.empty().append('<option value="">Seleccionar política Queue Tree</option>');
-      
-      if (response.result === 'success' && response.data.length > 0) {
-        response.data.forEach(function(policy) {
-          select.append(`<option value="${policy.id}" data-upload="${policy.max_limit_upload || ''}" data-download="${policy.max_limit_download || ''}">${policy.name} (${policy.max_limit})</option>`);
-        });
-      } else {
-        select.append('<option value="">No hay políticas disponibles para este router</option>');
-      }
-    },
-    error: function() {
-      select.empty().append('<option value="">Error al cargar políticas</option>');
-    }
+function loadComponentIP(id = "network_ip_mount") {
+  return new Promise((resolve, reject) => {
+    axios
+      .get(`${base_url}/network/network_ip_template`)
+      .then(({ data }) => {
+        const root = document.getElementById(id);
+        root.innerHTML = data;
+        resolve(root);
+      })
+      .catch(reject);
   });
 }
 
-// Handle Queue Tree policy selection
-$(document).on('change', '#queue_tree_policy', function() {
-  const selected = $(this).find('option:selected');
-  const uploadLimit = selected.data('upload');
-  const downloadLimit = selected.data('download');
-  
-  if (uploadLimit && downloadLimit) {
-    getQueueTreeUpload().val(uploadLimit);
-    getQueueTreeDownload().val(downloadLimit);
+// Validation function for network data
+function validateNetworkData() {
+  // Validación mejorada de IP para entrada manual
+  const ipInput = getIpInput();
+  if (ipInput.val()) {
+    const ip = ipInput.val().trim();
+    
+    // Patrón más estricto para validar IP
+    const ipPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    
+    if (!ipPattern.test(ip)) {
+      alert('Por favor ingrese una dirección IP válida.\nFormato: 192.168.4.100\nCada número debe estar entre 0 y 255');
+      ipInput.focus();
+      return false;
+    }
+    
+    // Validación adicional para IPs privadas comunes
+    const octets = ip.split('.').map(Number);
+    const firstOctet = octets[0];
+    const secondOctet = octets[1];
+    
+    // Sugerir rangos de IP privadas
+    if (!(
+      (firstOctet === 192 && secondOctet === 168) ||  // 192.168.x.x
+      (firstOctet === 10) ||                          // 10.x.x.x
+      (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) // 172.16-31.x.x
+    )) {
+      const confirmPublic = confirm('La IP ingresada no parece ser una IP privada.\n¿Está seguro de que desea continuar?');
+      if (!confirmPublic) {
+        ipInput.focus();
+        return false;
+      }
+    }
   }
-});
+  
+  // Validar marca de AP Cliente si está presente
+  const brandInput = getApClientBrandInput();
+  if (brandInput.val()) {
+    const brand = brandInput.val().trim();
+    if (brand.length < 2) {
+      alert('La marca del AP Cliente debe tener al menos 2 caracteres');
+      brandInput.focus();
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+// Get network data for form submission
+function getNetworkData() {
+  return {
+    ip: getIpInput().val(),
+    ap_cliente_marca: getApClientBrandInput().val()
+  };
+}

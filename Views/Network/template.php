@@ -1,3 +1,16 @@
+<!-- 
+CAMPOS REMOVIDOS PARA SIMPLIFICACIÓN:
+- Router: Campo para seleccionar router MikroTik
+- Modo de asignación: Configuración de asignación de IP
+- Nombre Simple Queue: Configuración de QoS
+- Contraseña PPPoE: Autenticación PPPoE
+- Local Address PPPoE: Dirección local para PPPoE
+
+Para reactivar estos campos, descomente las secciones correspondientes y 
+asegúrese de que las funciones JavaScript estén disponibles en network.js
+-->
+
+<!-- CAMPOS REMOVIDOS - COMENTADOS PARA REFERENCIA FUTURA
 <div class="form-group row m-b-10">
   <label class="col-md-3 text-lg-right col-form-label">Router <span class="text-danger">*</span></label>
   <div class="col-md-4">
@@ -45,23 +58,23 @@
     </div>
   </div>
 </div>
+FIN CAMPOS REMOVIDOS -->
 
 <div class="form-group row m-b-10">
   <label class="col-md-3 text-lg-right col-form-label">
     IP <span class="text-danger">*</span>
   </label>
   <div class="col-md-4">
-    <div class="input-group">
-      <input type="text" class="form-control" name="netIP" id="netIP" placeholder="Seleccione una IP" readonly>
-      <div class="input-group-append">
-        <button type="button" class="btn btn-white btn-search" onclick="searchIp();">
-          <i class="fa fa-search"></i>
-        </button>
-      </div>
-    </div>
+    <input type="text" class="form-control" name="netIP" id="netIP" 
+           placeholder="192.168.4.100" 
+           pattern="^(\d{1,3}\.){3}\d{1,3}$"
+           title="Ingrese una dirección IP válida (ej: 192.168.4.100)"
+           maxlength="15">
+    <small class="text-muted">Formato: 192.168.4.100</small>
   </div>
 </div>
 
+<!-- CAMPO REMOVIDO: Local Address PPPoE
 <div class="form-group row m-b-10">
   <label class="col-md-3 text-lg-right col-form-label">
     Local Address PPPoE <span class="text-danger">*</span>
@@ -71,7 +84,18 @@
       style="width:100%;">
   </div>
 </div>
+-->
 
+<!-- AP Cliente simplificado - solo texto simple -->
+<div class="form-group row m-b-10">
+  <label class="col-md-3 text-lg-right col-form-label">Marca AP Cliente</label>
+  <div class="col-md-4">
+    <input type="text" class="form-control" name="ap_cliente_brand" id="ap_cliente_brand" 
+           placeholder="Ingrese marca del AP Cliente" maxlength="100">
+  </div>
+</div>
+
+<!-- CAMPOS REMOVIDOS: Caja Nap y funcionalidades de búsqueda
 <div class="form-group row m-b-10" id="content-ap_cliente_id">
   <label class="col-md-3 text-lg-right col-form-label">AP Cliente</label>
   <div class="col-md-4">
@@ -95,7 +119,9 @@
     </div>
   </div>
 </div>
+-->
 
+<!-- CAMPOS REMOVIDOS: Queue Tree y QoS
 <div class="form-group row m-b-10" id="content-queue_tree" style="display: none;">
   <label class="col-md-3 text-lg-right col-form-label">Política Queue Tree <span class="text-danger">*</span></label>
   <div class="col-md-4">
@@ -120,3 +146,4 @@
     </div>
   </div>
 </div>
+FIN CAMPOS REMOVIDOS: Queue Tree -->

@@ -809,24 +809,43 @@ $pending = $data['contract_information']['pending'];
     if (!blockSaveNetRes) {
       blockSaveNetRes = true;
 
-      $('#network-tab').find(".form-control:visible").each(function () {
-        if ($(this).val().length == 0) {
-          $(this).focus();
-          valid = false;
-        }
-      });
+      // Validación específica para campos requeridos en modo simplificado
+      const netIPField = $("#netIP");
+      if (!netIPField.val() || netIPField.val().trim() === '') {
+        netIPField.focus();
+        valid = false;
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campo requerido',
+          text: 'Por favor ingrese una dirección IP válida.',
+        });
+        blockSaveNetRes = false;
+        return;
+      }
 
       if (valid) {
         var data = {};
 
         data.clientid = $("#idnetclient").val();
-        data.net_router = $("#netRouter").val();
-        data.net_name = $("#netName").val();
-        data.net_password = $("#netPassword").val();
+        
+        // Datos simplificados - solo IP y marca AP Cliente
         data.net_ip = $("#netIP").val();
-        data.net_localaddress = $("#netLocalAddress").val();
-        data.nap_cliente_id = getNapClientValue().val();
-        data.ap_cliente_id = getApClientValue().val();
+        
+        // La marca del AP Cliente se envía como note para modo simplificado
+        const apClienteBrand = $("#ap_cliente_brand").val();
+        if (apClienteBrand && apClienteBrand.trim() !== '') {
+          data.note = apClienteBrand.trim();
+        }
+        
+        // Campos opcionales para compatibilidad (se envían vacíos en modo simplificado)
+        data.net_router = "";
+        data.net_name = "";
+        data.net_password = "";
+        data.net_localaddress = "";
+        data.nap_cliente_id = "";
+        data.ap_cliente_id = "";
+
+        console.log('Datos a enviar:', data);
 
         Swal.fire({
           title: 'Por favor espere...',
@@ -837,21 +856,36 @@ $pending = $data['contract_information']['pending'];
           }
         });
 
-        $.post('<?= base_url(); ?>/Customers/modify_network', data).done(function (data) {
-          var res = JSON.parse(data);
+        $.post('<?= base_url(); ?>/Customers/modify_network', data).done(function (response) {
+          var res = JSON.parse(response);
+          console.log('Respuesta del servidor:', res);
+          
           if (res.result == "success") {
             Swal.fire({
-              title: "Guardado!",
-              icon: "success"
+              title: "¡Guardado exitosamente!",
+              text: "Los datos de red han sido actualizados correctamente.",
+              icon: "success",
+              timer: 2000,
+              showConfirmButton: false
+            }).then(() => {
+              // Redireccionar a la lista de clientes después de guardar
+              window.location.href = '<?= base_url(); ?>/customers';
             });
           } else {
-            blockRes = false;
             Swal.fire({
               icon: 'error',
-              title: 'No se pudo conectar',
-              text: 'Revisa la información de conexión del Router.',
+              title: 'Error al guardar',
+              text: res.message || 'No se pudieron guardar los datos de red. Inténtelo nuevamente.',
             });
           }
+          blockSaveNetRes = false;
+        }).fail(function(xhr, status, error) {
+          console.error('Error en la petición:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error de conexión',
+            text: 'No se pudo conectar con el servidor. Verifique su conexión e inténtelo nuevamente.',
+          });
           blockSaveNetRes = false;
         });
       }
