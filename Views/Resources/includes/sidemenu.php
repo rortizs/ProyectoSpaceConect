@@ -341,6 +341,45 @@
                     </ul>
                 </li>
             <?php } ?>
+            <!-- INICIO MENU RED MUNICIPAL -->
+            <?php if (!empty($_SESSION['permits'][MUNI]['v'])) { ?>
+                <li class="has-sub <?php if (in_array($current[0], ["munidashboard", "munired"]))
+                                        echo "active"; ?>">
+                    <a href="javascript:;">
+                        <b class="caret"></b>
+                        <i class="fas fa-building"></i>
+                        <span>Red Municipal</span>
+                    </a>
+                    <ul class="sub-menu">
+                        <li class="<?php if ($current[0] == "munidashboard")
+                                        echo "active"; ?>">
+                            <a href="<?= base_url() ?>/munidashboard">Dashboard</a>
+                        </li>
+                        <li class="<?php if ($current[0] == "munired" && (!isset($current[1]) || $current[1] == "departments"))
+                                        echo "active"; ?>">
+                            <a href="<?= base_url() ?>/munired/departments">Departamentos</a>
+                        </li>
+                        <li class="<?php if ($current[0] == "munired" && isset($current[1]) && $current[1] == "users")
+                                        echo "active"; ?>">
+                            <a href="<?= base_url() ?>/munired/users">Usuarios de Red</a>
+                        </li>
+                        <li class="<?php if ($current[0] == "munired" && isset($current[1]) && $current[1] == "bandwidth")
+                                        echo "active"; ?>">
+                            <a href="<?= base_url() ?>/munired/bandwidth">Ancho de Banda</a>
+                        </li>
+                        <li class="<?php if ($current[0] == "munired" && isset($current[1]) && $current[1] == "filtering")
+                                        echo "active"; ?>">
+                            <a href="<?= base_url() ?>/munired/filtering">Filtrado de Contenido</a>
+                        </li>
+                        <li class="<?php if ($current[0] == "munired" && isset($current[1]) && $current[1] == "config")
+                                        echo "active"; ?>">
+                            <a href="<?= base_url() ?>/munired/config">Configuracion</a>
+                        </li>
+                    </ul>
+                </li>
+            <?php } ?>
+            <!-- FIN MENU RED MUNICIPAL -->
+
             <?php if (!empty($_SESSION['permits'][BUSINESS]['v']) || !empty($_SESSION['permits'][USERS]['v']) || !empty($_SESSION['permits'][CURRENCYS]['v']) || !empty($_SESSION['permits'][INCIDENTS]['v']) || !empty($_SESSION['permits'][RUNWAY]['v']) || !empty($_SESSION['permits'][VOUCHERS]['v']) || !empty($_SESSION['permits'][UNITS]['v'])) { ?>
                 <li class="<?php if ($current[0] == "settings" || $current[0] == "users" || $current[0] == "profiles" || $current[0] == "currencys" || $current[0] == "incidents" || $current[0] == "runway" || $current[0] == "vouchers" || $current[0] == "unit")
                                 echo "active"; ?>">

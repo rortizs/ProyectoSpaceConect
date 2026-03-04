@@ -63,6 +63,7 @@ const UNITS = 17;
 const EMAIL = 18;
 const RED = 19;
 const WHATSAPP = 20;
+const MUNI = 21;
 /* DELIMITADORES */
 const SPD = ".";
 const SPM = ",";
