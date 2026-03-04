@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `muni_dept_whitelist` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `department_id` int(11) DEFAULT NULL COMMENT 'FK to muni_departments (NULL = global)',
   `domain` varchar(255) NOT NULL COMMENT 'Whitelisted domain',
-  `added_by` int(11) DEFAULT NULL COMMENT 'FK to users (who added this)',
+  `added_by` bigint DEFAULT NULL COMMENT 'FK to users (who added this)',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `fk_whitelist_dept` (`department_id`),
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS `muni_dept_whitelist` (
 -- =============================================
 CREATE TABLE IF NOT EXISTS `muni_audit_log` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL COMMENT 'FK to users (admin who performed action)',
+  `user_id` bigint NOT NULL COMMENT 'FK to users (admin who performed action)',
   `action` varchar(50) NOT NULL COMMENT 'Action type (create_user, sync_qos, block_domain, etc)',
   `entity_type` varchar(30) DEFAULT NULL COMMENT 'Entity type (department, user, filter, qos)',
   `entity_id` int(11) DEFAULT NULL COMMENT 'ID of affected entity',
@@ -122,17 +122,16 @@ CREATE TABLE IF NOT EXISTS `muni_audit_log` (
 -- =============================================
 
 -- Register the Municipal Network module (ID 21)
-INSERT INTO `modules` (`id`, `name`, `description`)
-VALUES (21, 'Red Municipal', 'Administración de Red Municipal')
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+INSERT INTO `modules` (`id`, `module`, `state`)
+VALUES (21, 'Red Municipal', 1)
+ON DUPLICATE KEY UPDATE `module` = VALUES(`module`);
 
 -- Create the Municipal Admin profile
-INSERT INTO `profiles` (`name`, `description`, `status`)
-VALUES ('Administrador Municipal', 'Acceso exclusivo al módulo de red municipal', 1);
+INSERT INTO `profiles` (`profile`, `description`, `registration_date`, `state`)
+VALUES ('Administrador Municipal', 'Acceso exclusivo al módulo de red municipal', NOW(), 1);
 
 -- Grant permissions to the new profile
--- Note: Replace @muni_profile_id with the actual auto-incremented ID after INSERT
-SET @muni_profile_id = (SELECT id FROM `profiles` WHERE `name` = 'Administrador Municipal' LIMIT 1);
+SET @muni_profile_id = (SELECT id FROM `profiles` WHERE `profile` = 'Administrador Municipal' LIMIT 1);
 
 -- DASHBOARD module (view only)
 INSERT INTO `permits` (`profileid`, `moduleid`, `v`, `r`, `a`, `e`)
