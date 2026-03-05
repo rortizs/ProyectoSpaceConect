@@ -272,13 +272,32 @@ class Munired extends Controllers
     public function saveUser()
     {
         if ($_POST) {
-            if (empty($_POST['name']) || empty($_POST['ip_address']) || empty($_POST['department_id'])) {
+            if (empty($_POST['name']) || empty($_POST['ip_address'])) {
                 $response = ['status' => 'error', 'msg' => 'Campos obligatorios incompletos.'];
             } else {
                 $id = intval(decrypt($_POST['id'] ?? ''));
 
+                // Get router_id: from department if provided, otherwise first available router
+                $dept_id = !empty($_POST['department_id']) ? intval($_POST['department_id']) : null;
+                $router_id = 0;
+
+                if ($dept_id) {
+                    $dept = $this->model->getDepartment($dept_id);
+                    if (!empty($dept)) {
+                        $router_id = intval($dept['router_id']);
+                    }
+                }
+
+                if ($router_id == 0) {
+                    $routers = $this->model->getRouters();
+                    if (!empty($routers)) {
+                        $router_id = intval($routers[0]['id']);
+                    }
+                }
+
                 $userData = [
-                    'department_id' => intval($_POST['department_id']),
+                    'department_id' => $dept_id,
+                    'router_id' => $router_id,
                     'name' => strClean($_POST['name']),
                     'ip_address' => strClean($_POST['ip_address']),
                     'mac_address' => !empty($_POST['mac_address']) ? strClean($_POST['mac_address']) : null,
@@ -312,7 +331,7 @@ class Munired extends Controllers
                         $response = ['status' => 'success', 'msg' => $id == 0 ? 'Usuario creado exitosamente.' : 'Usuario actualizado.'];
 
                         // Auto-sync queue after save
-                        $this->initSyncService($userData['department_id']);
+                        $this->initSyncService($userData['router_id']);
                         if ($this->syncService) {
                             $userId = $id > 0 ? $id : $this->getLastUserId();
                             if ($userId) {
@@ -439,32 +458,28 @@ class Munired extends Controllers
         die();
     }
 
-    public function syncQoS()
+    public function getQoSStatus()
     {
-        if ($_POST && $_SESSION['permits_module']['a']) {
-            $router_id = intval($_POST['router_id']);
-            $this->initSyncService($router_id);
-
-            if (!$this->syncService) {
-                echo json_encode(['status' => 'error', 'msg' => 'No se pudo inicializar el servicio de sync.'], JSON_UNESCAPED_UNICODE);
+        if ($_SESSION['permits_module']['v']) {
+            $router_id = intval($_POST['router_id'] ?? 0);
+            if ($router_id <= 0) {
+                echo json_encode(['status' => 'error', 'msg' => 'Seleccione un router.'], JSON_UNESCAPED_UNICODE);
                 die();
             }
 
-            $result = $this->syncService->syncQoSHierarchy();
+            $this->initSyncService($router_id);
 
-            $this->model->logAction(
-                $_SESSION['idUser'],
-                'sync_qos',
-                'qos',
-                null,
-                json_encode(['synced' => $result->synced, 'errors' => count($result->errors)]),
-                $result->success ? 'success' : 'error'
-            );
+            if (!$this->syncService) {
+                echo json_encode(['status' => 'error', 'msg' => 'No se pudo inicializar el servicio. Verifique que la API del router este habilitada.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            $result = $this->syncService->getQoSStatus();
 
             $response = [
-                'status' => $result->success ? 'success' : 'warning',
+                'status' => $result->success ? 'success' : 'error',
                 'msg' => $result->message,
-                'data' => ['synced' => $result->synced, 'errors' => $result->errors],
+                'data' => ['trees' => $result->trees ?? []],
             ];
 
             echo json_encode($response, JSON_UNESCAPED_UNICODE);
@@ -673,8 +688,13 @@ class Munired extends Controllers
                 die();
             }
 
-            // Get all usable IPs
-            $allIps = getUsableIpsFromCidr($dept['ip_range']);
+            // Get all usable IPs from simple range (e.g., 192.168.88.10-192.168.88.50)
+            $parsed = parseSimpleRange($dept['ip_range']);
+            if ($parsed === null) {
+                echo json_encode(['status' => 'error', 'msg' => 'Formato de rango IP invalido.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+            $allIps = getUsableIpsFromRange($parsed['start'], $parsed['end']);
 
             // Get used IPs
             $users = $this->model->getUsersByDepartment($dept_id);

@@ -39,7 +39,13 @@
                   $arrData = $this->model->login_session($_SESSION['idUser']);
                   user_session($_SESSION['idUser']);
                   business_session();
-                  $arrResponse = array('status' => "success", 'msg' => 'ok');
+                  // Load permissions to determine redirect
+                  consent_permission(DASHBOARD);
+                  $redirect = base_url() . '/dashboard';
+                  if (!empty($_SESSION['permits'][MUNI]['v']) && empty($_SESSION['permits'][CLIENTS]['v'])) {
+                      $redirect = base_url() . '/munidashboard';
+                  }
+                  $arrResponse = array('status' => "success", 'msg' => 'ok', 'redirect' => $redirect);
                 }else{
                   $arrResponse = array('status' => "error", 'msg' => 'El usuario se encuentra desactivado, comuniquese con su administrador.');
                 }

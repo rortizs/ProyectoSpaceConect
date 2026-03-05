@@ -59,44 +59,40 @@
                             <a href="javascript:;" class="list-group-item list-group-item-action" onclick="syncAllFromConfig()">
                                 <i class="fas fa-sync-alt text-primary"></i>
                                 <strong>Sincronizar TODO</strong>
-                                <small class="text-muted d-block">Colas de usuarios + QoS + Filtrado</small>
-                            </a>
-                            <a href="javascript:;" class="list-group-item list-group-item-action" onclick="syncQoSFromConfig()">
-                                <i class="fas fa-project-diagram text-warning"></i>
-                                <strong>Sincronizar QoS</strong>
-                                <small class="text-muted d-block">Queue Trees de departamentos</small>
+                                <small class="text-muted d-block">Colas de usuarios (Simple Queues) + Filtrado</small>
                             </a>
                             <a href="javascript:;" class="list-group-item list-group-item-action" onclick="syncFilteringFromConfig()">
                                 <i class="fas fa-shield-alt text-danger"></i>
                                 <strong>Sincronizar Filtrado</strong>
-                                <small class="text-muted d-block">DNS blocks + whitelist</small>
+                                <small class="text-muted d-block">DNS blocks + whitelist por usuario</small>
                             </a>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> Los Queue Trees (QoS) son gestionados por Digicom y no se modifican desde este panel.
+                            </small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Quick Info -->
+                <!-- Router Status (dynamic) -->
                 <div class="tile">
-                    <h3 class="tile-title"><i class="fas fa-info-circle"></i> Informacion del Sistema</h3>
+                    <h3 class="tile-title"><i class="fas fa-info-circle"></i> Estado del Router</h3>
                     <div class="tile-body">
-                        <table class="table table-sm">
-                            <tr>
-                                <td><strong>Enlace</strong></td>
-                                <td>Starlink</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Velocidad</strong></td>
-                                <td>251 Mbps Down / 37 Mbps Up</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Latencia</strong></td>
-                                <td>~44ms</td>
-                            </tr>
-                            <tr>
-                                <td><strong>QoS Global</strong></td>
-                                <td><code>muni-global: 37M/251M</code></td>
-                            </tr>
-                        </table>
+                        <div id="routerStatusInfo">
+                            <p class="text-muted">Seleccione un router y presione "Test" para ver la informacion del sistema.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QoS Trees (read-only) -->
+                <div class="tile">
+                    <h3 class="tile-title"><i class="fas fa-project-diagram"></i> Queue Trees (solo lectura)</h3>
+                    <div class="tile-body">
+                        <button class="btn btn-outline-info btn-sm mb-2" onclick="loadQoSFromConfig()">
+                            <i class="fas fa-eye"></i> Ver Queue Trees
+                        </button>
+                        <div id="configQoSPanel"></div>
                     </div>
                 </div>
             </div>

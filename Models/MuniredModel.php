@@ -124,14 +124,22 @@ class MuniredModel extends Mysql
         return 'success';
     }
 
-    public function validateIpRange(string $cidr, int $router_id, int $exclude_id = 0)
+    public function validateIpRange(string $range, int $router_id, int $exclude_id = 0)
     {
-        // Check router scope
+        // Parse simple range (format: 192.168.88.10-192.168.88.50)
+        $parsed = parseSimpleRange($range);
+        if ($parsed === null) {
+            return ['valid' => false, 'error' => 'Formato de rango invalido. Use: IP_INICIO-IP_FIN (ej: 192.168.88.10-192.168.88.50)'];
+        }
+
+        // Check router scope - verify IPs are within router's network
         $router = $this->select("SELECT ip_range FROM network_routers WHERE id = $router_id");
         if (!empty($router) && !empty($router['ip_range'])) {
-            list($subnet,) = explode('/', $cidr);
-            if (!ipInCidr($subnet, $router['ip_range'])) {
-                return ['valid' => false, 'error' => 'El rango IP está fuera del alcance del router (' . $router['ip_range'] . ')'];
+            // Router ip_range might be CIDR or simple range
+            if (strpos($router['ip_range'], '/') !== false) {
+                if (!ipInCidr($parsed['start'], $router['ip_range']) || !ipInCidr($parsed['end'], $router['ip_range'])) {
+                    return ['valid' => false, 'error' => 'El rango IP esta fuera del alcance del router (' . $router['ip_range'] . ')'];
+                }
             }
         }
 
@@ -140,7 +148,7 @@ class MuniredModel extends Mysql
         $departments = $this->select_all("SELECT id, name, ip_range FROM muni_departments WHERE router_id = $router_id $exclude");
 
         foreach ($departments as $dept) {
-            if (cidrOverlap($cidr, $dept['ip_range'])) {
+            if (simpleRangesOverlap($range, $dept['ip_range'])) {
                 return ['valid' => false, 'error' => 'El rango IP se superpone con el departamento "' . $dept['name'] . '" (' . $dept['ip_range'] . ')'];
             }
         }
@@ -168,16 +176,19 @@ class MuniredModel extends Mysql
             $search = addslashes($filters['search']);
             $where .= " AND (mu.name LIKE '%$search%' OR mu.ip_address LIKE '%$search%')";
         }
+        if (!empty($filters['router_id'])) {
+            $router_id = intval($filters['router_id']);
+            $where .= " AND mu.router_id = $router_id";
+        }
 
         $sql = "SELECT mu.*,
                     md.name AS department_name,
-                    md.default_upload,
-                    md.default_download,
-                    md.priority AS dept_priority
+                    COALESCE(mu.custom_upload, md.default_upload, '5M') AS effective_upload,
+                    COALESCE(mu.custom_download, md.default_download, '10M') AS effective_download
                 FROM muni_users mu
-                JOIN muni_departments md ON mu.department_id = md.id
+                LEFT JOIN muni_departments md ON mu.department_id = md.id
                 $where
-                ORDER BY md.name ASC, mu.name ASC";
+                ORDER BY mu.name ASC";
 
         return $this->select_all($sql);
     }
@@ -187,11 +198,10 @@ class MuniredModel extends Mysql
         $sql = "SELECT mu.*,
                     md.name AS department_name,
                     md.ip_range AS dept_ip_range,
-                    md.default_upload,
-                    md.default_download,
-                    md.router_id
+                    COALESCE(mu.custom_upload, md.default_upload, '5M') AS default_upload,
+                    COALESCE(mu.custom_download, md.default_download, '10M') AS default_download
                 FROM muni_users mu
-                JOIN muni_departments md ON mu.department_id = md.id
+                LEFT JOIN muni_departments md ON mu.department_id = md.id
                 WHERE mu.id = $id";
 
         return $this->select($sql);
@@ -205,29 +215,36 @@ class MuniredModel extends Mysql
             return 'ip_exists';
         }
 
-        // Check IP within department range
-        $dept = $this->select("SELECT ip_range, router_id FROM muni_departments WHERE id = " . intval($data['department_id']));
-        if (empty($dept)) {
-            return 'dept_not_found';
+        $router_id = intval($data['router_id']);
+        $dept_id = !empty($data['department_id']) ? intval($data['department_id']) : null;
+
+        // If department provided, validate IP within dept range
+        if ($dept_id) {
+            $dept = $this->select("SELECT ip_range FROM muni_departments WHERE id = $dept_id");
+            if (!empty($dept) && !empty($dept['ip_range'])) {
+                $parsed = parseSimpleRange($dept['ip_range']);
+                if ($parsed !== null && !ipInRange($data['ip_address'], $parsed['start'], $parsed['end'])) {
+                    return 'ip_out_of_range';
+                }
+            }
         }
 
-        if (!ipInCidr($data['ip_address'], $dept['ip_range'])) {
-            return 'ip_out_of_range';
-        }
+        $queue_name = sanitizeQueueName('muni-' . $data['name'] . '-' . $data['ip_address']);
 
-        $queue_name = sanitizeQueueName('muni-' . $this->getDeptNameById(intval($data['department_id'])) . '-' . $data['name']);
+        $upload = !empty($data['custom_upload']) ? $data['custom_upload'] : '5M';
+        $download = !empty($data['custom_download']) ? $data['custom_download'] : '10M';
 
         $query = "INSERT INTO muni_users (department_id, router_id, name, ip_address, mac_address, custom_upload, custom_download, queue_name)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         $values = [
-            intval($data['department_id']),
-            intval($dept['router_id']),
+            $dept_id,
+            $router_id,
             $data['name'],
             $data['ip_address'],
             $data['mac_address'] ?? null,
-            $data['custom_upload'] ?? null,
-            $data['custom_download'] ?? null,
+            $upload,
+            $download,
             $queue_name,
         ];
 
@@ -243,13 +260,22 @@ class MuniredModel extends Mysql
             return 'ip_exists';
         }
 
-        // Check IP within department range
-        $dept = $this->select("SELECT ip_range FROM muni_departments WHERE id = " . intval($data['department_id']));
-        if (!empty($dept) && !ipInCidr($data['ip_address'], $dept['ip_range'])) {
-            return 'ip_out_of_range';
+        $dept_id = !empty($data['department_id']) ? intval($data['department_id']) : null;
+
+        // If department provided, validate IP within dept range
+        if ($dept_id) {
+            $dept = $this->select("SELECT ip_range FROM muni_departments WHERE id = $dept_id");
+            if (!empty($dept) && !empty($dept['ip_range'])) {
+                $parsed = parseSimpleRange($dept['ip_range']);
+                if ($parsed !== null && !ipInRange($data['ip_address'], $parsed['start'], $parsed['end'])) {
+                    return 'ip_out_of_range';
+                }
+            }
         }
 
-        $queue_name = sanitizeQueueName('muni-' . $this->getDeptNameById(intval($data['department_id'])) . '-' . $data['name']);
+        $queue_name = sanitizeQueueName('muni-' . $data['name'] . '-' . $data['ip_address']);
+        $upload = !empty($data['custom_upload']) ? $data['custom_upload'] : '5M';
+        $download = !empty($data['custom_download']) ? $data['custom_download'] : '10M';
 
         $query = "UPDATE muni_users SET
                     department_id = ?, name = ?, ip_address = ?, mac_address = ?,
@@ -258,12 +284,12 @@ class MuniredModel extends Mysql
                   WHERE id = $id";
 
         $values = [
-            intval($data['department_id']),
+            $dept_id,
             $data['name'],
             $data['ip_address'],
             $data['mac_address'] ?? null,
-            $data['custom_upload'] ?? null,
-            $data['custom_download'] ?? null,
+            $upload,
+            $download,
             $queue_name,
         ];
 

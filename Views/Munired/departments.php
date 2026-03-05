@@ -91,8 +91,8 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Rango IP (CIDR) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="deptIpRange" name="ip_range" required placeholder="Ej: 10.0.2.0/24">
+                                <label>Rango IP <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="deptIpRange" name="ip_range" required placeholder="Ej: 192.168.88.10-192.168.88.50">
                             </div>
                         </div>
                         <div class="col-md-3">

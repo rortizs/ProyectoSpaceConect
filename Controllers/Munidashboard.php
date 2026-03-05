@@ -61,20 +61,6 @@ class Munidashboard extends Controllers
         die();
     }
 
-    public function getDepartmentSummary()
-    {
-        if ($_SESSION['permits_module']['v']) {
-            $router_id = !empty($_POST['router_id']) ? intval($_POST['router_id']) : null;
-            $summary = $this->model->getDepartmentSummary($router_id);
-
-            echo json_encode([
-                'status' => 'success',
-                'data' => $summary,
-            ], JSON_UNESCAPED_UNICODE);
-        }
-        die();
-    }
-
     public function getRouterStatus()
     {
         if ($_SESSION['permits_module']['v']) {
@@ -85,6 +71,8 @@ class Munidashboard extends Controllers
                 die();
             }
 
+            session_write_close(); // Release session lock before router call
+
             require_once('Services/MuniSyncService.php');
             $syncService = new MuniSyncService($router_id);
             $result = $syncService->getRouterStatus();
@@ -93,6 +81,37 @@ class Munidashboard extends Controllers
                 'status' => $result->success ? 'success' : 'error',
                 'connected' => $result->connected ?? false,
                 'data' => $result->data ?? null,
+                'msg' => $result->message ?? '',
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        die();
+    }
+
+    public function getBandwidthStats()
+    {
+        if ($_SESSION['permits_module']['v']) {
+            $router_id = intval($_POST['router_id'] ?? 0);
+
+            if ($router_id == 0) {
+                echo json_encode(['status' => 'error', 'msg' => 'Seleccione un router.'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+
+            session_write_close(); // Release session lock before router call
+
+            require_once('Services/MuniSyncService.php');
+            $syncService = new MuniSyncService($router_id);
+            $result = $syncService->getBandwidthStats();
+
+            echo json_encode([
+                'status' => $result->success ? 'success' : 'error',
+                'data' => [
+                    'queues' => $result->queues ?? [],
+                    'total_download' => $result->total_download ?? 0,
+                    'total_upload' => $result->total_upload ?? 0,
+                    'active_count' => $result->active_count ?? 0,
+                    'disabled_count' => $result->disabled_count ?? 0,
+                ],
                 'msg' => $result->message ?? '',
             ], JSON_UNESCAPED_UNICODE);
         }
@@ -109,6 +128,8 @@ class Munidashboard extends Controllers
                 echo json_encode(['status' => 'error', 'msg' => 'Dominio y router son requeridos.'], JSON_UNESCAPED_UNICODE);
                 die();
             }
+
+            session_write_close(); // Release session lock before router call
 
             require_once('Services/MuniSyncService.php');
             require_once('Libraries/MikroTik/RouterFactory.php');

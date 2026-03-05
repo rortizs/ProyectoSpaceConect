@@ -11,16 +11,15 @@
         <div class="app-title">
             <div>
                 <h1><i class="fas fa-building"></i> <?= $data['page_title']; ?></h1>
-                <p>Panel de control simplificado de la red municipal</p>
+                <p>Panel de control de la red municipal</p>
             </div>
             <ul class="app-breadcrumb breadcrumb">
                 <li class="breadcrumb-item"><i class="fa fa-home fa-lg"></i></li>
-                <li class="breadcrumb-item"><a href="<?= BASE_URL; ?>/dashboard">Dashboard</a></li>
                 <li class="breadcrumb-item active">Red Municipal</li>
             </ul>
         </div>
 
-        <!-- Router Status Bar -->
+        <!-- Router Selector -->
         <div class="row mb-3">
             <div class="col-md-8">
                 <div class="d-flex align-items-center">
@@ -33,102 +32,107 @@
             </div>
             <div class="col-md-4 text-right">
                 <button class="btn btn-primary btn-sm" onclick="syncAll()">
-                    <i class="fas fa-sync-alt"></i> Sincronizar Todo
+                    <i class="fas fa-sync-alt"></i> Sincronizar
                 </button>
                 <a href="<?= base_url() ?>/munired/users" class="btn btn-success btn-sm">
-                    <i class="fas fa-user-plus"></i> Nuevo Usuario
+                    <i class="fas fa-user-plus"></i> Nuevo Empleado
                 </a>
             </div>
         </div>
 
         <!-- Stats Cards -->
         <div class="row" id="statsCards">
-            <div class="col-md-2 col-sm-4 col-6">
+            <div class="col-md-3 col-sm-6 col-6">
                 <div class="widget-small primary coloured-icon">
                     <i class="icon fa fa-users fa-3x"></i>
                     <div class="info">
                         <h4 id="statActiveUsers">0</h4>
-                        <p><b>Usuarios Activos</b></p>
+                        <p><b>Empleados Activos</b></p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6">
+            <div class="col-md-3 col-sm-6 col-6">
+                <div class="widget-small coloured-icon" style="border-left: 3px solid #999;">
+                    <i class="icon fa fa-user-slash fa-3x" style="background:#999;"></i>
+                    <div class="info">
+                        <h4 id="statDisabledUsers">0</h4>
+                        <p><b>Inactivos</b></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 col-6">
                 <div class="widget-small info coloured-icon">
-                    <i class="icon fa fa-sitemap fa-3x"></i>
+                    <i class="icon fa fa-download fa-3x"></i>
                     <div class="info">
-                        <h4 id="statDepartments">0</h4>
-                        <p><b>Departamentos</b></p>
+                        <h4 id="statTotalConsumption">--</h4>
+                        <p><b>Consumo Total</b></p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6">
-                <div class="widget-small warning coloured-icon">
-                    <i class="icon fa fa-clock fa-3x"></i>
+            <div class="col-md-3 col-sm-6 col-6">
+                <div id="routerStatusCard" class="widget-small coloured-icon" style="border-left: 3px solid #999;">
+                    <i id="routerStatusIcon" class="icon fa fa-server fa-3x" style="background:#999;"></i>
                     <div class="info">
-                        <h4 id="statPendingSync">0</h4>
-                        <p><b>Sync Pendiente</b></p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2 col-sm-4 col-6">
-                <div class="widget-small danger coloured-icon">
-                    <i class="icon fa fa-exclamation-triangle fa-3x"></i>
-                    <div class="info">
-                        <h4 id="statSyncErrors">0</h4>
-                        <p><b>Errores Sync</b></p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2 col-sm-4 col-6">
-                <div class="widget-small primary coloured-icon">
-                    <i class="icon fa fa-ban fa-3x"></i>
-                    <div class="info">
-                        <h4 id="statBlockedDomains">0</h4>
-                        <p><b>Dominios Bloqueados</b></p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2 col-sm-4 col-6">
-                <div class="widget-small info coloured-icon">
-                    <i class="icon fa fa-filter fa-3x"></i>
-                    <div class="info">
-                        <h4 id="statCategories">0</h4>
-                        <p><b>Categorias Filtro</b></p>
+                        <h4 id="statRouterStatus">--</h4>
+                        <p><b>Estado Router</b></p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Department Summary Cards -->
+        <!-- Router offline alert -->
+        <div class="row" id="routerOfflineAlert" style="display:none;">
+            <div class="col-12">
+                <div class="alert alert-warning mb-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Router desconectado</strong> — Las metricas de consumo en tiempo real no estan disponibles.
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Consumers Table -->
         <div class="row">
             <div class="col-md-12">
                 <div class="tile">
                     <div class="tile-title-w-btn">
-                        <h3 class="title"><i class="fas fa-sitemap"></i> Departamentos</h3>
-                        <a href="<?= base_url() ?>/munired/departments" class="btn btn-outline-primary btn-sm">
-                            Ver Todos <i class="fas fa-arrow-right"></i>
-                        </a>
+                        <h3 class="title"><i class="fas fa-chart-bar"></i> Consumo por Empleado</h3>
+                        <small class="text-muted" id="bandwidthTimestamp"></small>
                     </div>
                     <div class="tile-body">
-                        <div class="row" id="departmentCards">
-                            <div class="col-12 text-center text-muted">
-                                <i class="fas fa-spinner fa-spin"></i> Cargando departamentos...
-                            </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm" id="topConsumersTable">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Empleado</th>
+                                        <th>IP</th>
+                                        <th>Bajada</th>
+                                        <th>Subida</th>
+                                        <th>Limite</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topConsumersBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">
+                                            <i class="fas fa-spinner fa-spin"></i> Cargando datos del router...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Quick Block + Recent Alerts -->
+        <!-- Quick Block + Recent Activity -->
         <div class="row">
-            <!-- Quick Domain Block -->
-            <div class="col-md-4">
+            <div class="col-md-5">
                 <div class="tile">
                     <h3 class="tile-title"><i class="fas fa-ban"></i> Bloqueo Rapido</h3>
                     <div class="tile-body">
-                        <div class="form-group">
-                            <label>Dominio a bloquear</label>
+                        <div class="form-group mb-0">
                             <div class="input-group">
                                 <input type="text" id="quickBlockDomain" class="form-control" placeholder="ejemplo.com">
                                 <div class="input-group-append">
@@ -137,27 +141,16 @@
                                     </button>
                                 </div>
                             </div>
-                            <small class="form-text text-muted">Bloquea el dominio en todos los departamentos via DNS</small>
+                            <small class="form-text text-muted">Bloquea el dominio via DNS en el router</small>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Router Info -->
-            <div class="col-md-3">
-                <div class="tile">
-                    <h3 class="tile-title"><i class="fas fa-server"></i> Estado del Router</h3>
-                    <div class="tile-body" id="routerInfo">
-                        <p class="text-muted">Seleccione un router para ver su estado.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Alerts -->
-            <div class="col-md-5">
+            <div class="col-md-7">
                 <div class="tile">
                     <h3 class="tile-title"><i class="fas fa-bell"></i> Actividad Reciente</h3>
-                    <div class="tile-body" style="max-height: 300px; overflow-y: auto;">
+                    <div class="tile-body" style="max-height: 250px; overflow-y: auto;">
                         <ul class="list-group" id="recentAlerts">
                             <li class="list-group-item text-muted text-center">Cargando...</li>
                         </ul>

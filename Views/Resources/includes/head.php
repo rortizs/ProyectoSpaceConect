@@ -60,6 +60,7 @@
         <!-- ================== INICIO CABEZERA =============== -->
         <?php
         $current = explode("/", $_GET['route']);
+        if (!isset($current[1])) $current[1] = '';
         require_once("navbar.php");
         require_once("sidemenu.php");
         ?>

@@ -64,9 +64,9 @@ class MuniSyncService extends BaseService
             return $res;
         }
 
-        // Determine bandwidth: custom or department default
-        $upload = !empty($user['custom_upload']) ? $user['custom_upload'] : $user['default_upload'];
-        $download = !empty($user['custom_download']) ? $user['custom_download'] : $user['default_download'];
+        // Determine bandwidth: user's own values (already resolved with COALESCE in model)
+        $upload = !empty($user['custom_upload']) ? $user['custom_upload'] : (!empty($user['default_upload']) ? $user['default_upload'] : '5M');
+        $download = !empty($user['custom_download']) ? $user['custom_download'] : (!empty($user['default_download']) ? $user['default_download'] : '10M');
         $maxLimit = "{$upload}/{$download}";
         $queueName = $user['queue_name'];
         $target = $user['ip_address'] . '/32';
@@ -164,8 +164,8 @@ class MuniSyncService extends BaseService
 
                 if ($enable) {
                     // Restore full bandwidth
-                    $upload = !empty($user['custom_upload']) ? $user['custom_upload'] : $user['default_upload'];
-                    $download = !empty($user['custom_download']) ? $user['custom_download'] : $user['default_download'];
+                    $upload = !empty($user['custom_upload']) ? $user['custom_upload'] : (!empty($user['default_upload']) ? $user['default_upload'] : '5M');
+                    $download = !empty($user['custom_download']) ? $user['custom_download'] : (!empty($user['default_download']) ? $user['default_download'] : '10M');
                     $maxLimit = "{$upload}/{$download}";
                 } else {
                     // Throttle to minimum
@@ -246,123 +246,45 @@ class MuniSyncService extends BaseService
     }
 
     // =============================================
-    // QoS HIERARCHY (Queue Trees)
+    // QoS STATUS (Queue Trees - READ ONLY)
     // =============================================
 
     /**
-     * Sync the full QoS hierarchy for all departments on a router
-     * Creates: parent "muni-global" Queue Tree → child per department
+     * Read existing Queue Trees from router (Digicom's DESCARGAS/SUBIDAS trees)
+     * This is READ-ONLY — we do NOT create or modify Queue Trees
      */
-    public function syncQoSHierarchy(): object
+    public function getQoSStatus(): object
     {
-        $res = (object) ['success' => false, 'synced' => 0, 'errors' => []];
+        $res = (object) ['success' => false, 'trees' => [], 'message' => ''];
 
         if (!$this->connectRouter()) {
-            $res->message = 'No se pudo conectar al router';
-            return $res;
-        }
-
-        $departments = $this->model->getDepartments($this->routerId);
-
-        if (empty($departments)) {
-            $res->success = true;
-            $res->message = 'No hay departamentos configurados';
+            $res->message = 'No se pudo conectar al router. Verifique que la API REST este habilitada.';
             return $res;
         }
 
         try {
-            // Step 1: Ensure parent Queue Tree "muni-global" exists
-            $parentName = 'muni-global';
-            $parentResult = $this->ensureQueueTree($parentName, 'global', '37M/251M', [
-                'comment' => 'Municipal Network - Global QoS Parent',
-                'priority' => 1,
-            ]);
+            $existingTrees = $this->router->APIListQueueTree();
 
-            if (!$parentResult->success) {
-                $res->message = "Error creando Queue Tree padre: " . ($parentResult->message ?? '');
-                return $res;
-            }
-
-            // Step 2: Create/update per-department Queue Trees
-            foreach ($departments as $dept) {
-                if (empty($dept['qos_max_limit'])) {
-                    continue; // Skip departments without QoS config
-                }
-
-                $deptQueueName = 'muni-dept-' . sanitizeQueueName($dept['name']);
-
-                $deptResult = $this->ensureQueueTree($deptQueueName, $parentName, $dept['qos_max_limit'], [
-                    'comment' => 'Municipal Dept: ' . $dept['name'],
-                    'priority' => intval($dept['priority']),
-                ]);
-
-                if ($deptResult->success) {
-                    // Store the MikroTik .id for reference
-                    $queueTreeId = $deptResult->queue_tree_id ?? null;
-                    $this->model->updateQosSyncStatus($dept['id'], 'synced', $queueTreeId);
-                    $res->synced++;
-                } else {
-                    $this->model->updateQosSyncStatus($dept['id'], 'error');
-                    $res->errors[] = [
-                        'dept_id' => $dept['id'],
-                        'name' => $dept['name'],
-                        'error' => $deptResult->message ?? 'desconocido',
+            if ($existingTrees->success && is_array($existingTrees->data)) {
+                foreach ($existingTrees->data as $tree) {
+                    $res->trees[] = [
+                        'id' => $tree->{'.id'} ?? '',
+                        'name' => $tree->name ?? '',
+                        'parent' => $tree->parent ?? '',
+                        'max_limit' => $tree->{'max-limit'} ?? '',
+                        'priority' => $tree->priority ?? '',
+                        'comment' => $tree->comment ?? '',
                     ];
                 }
+                $res->success = true;
+                $res->message = 'Queue Trees leidos: ' . count($res->trees);
+            } else {
+                $res->message = 'No se pudieron leer los Queue Trees';
             }
-
-            $res->success = empty($res->errors);
-            $res->message = "QoS sincronizado. Deptos: {$res->synced}, Errores: " . count($res->errors);
         } catch (Exception $e) {
             $res->message = 'Excepcion: ' . $e->getMessage();
         }
 
-        return $res;
-    }
-
-    /**
-     * Ensure a Queue Tree exists (create or update)
-     */
-    private function ensureQueueTree(string $name, string $parent, string $maxLimit, array $options = []): object
-    {
-        $res = (object) ['success' => false, 'message' => '', 'queue_tree_id' => null];
-
-        // Search for existing Queue Tree by name
-        $existingTrees = $this->router->APIListQueueTree();
-
-        $existingId = null;
-        if ($existingTrees->success && is_array($existingTrees->data)) {
-            foreach ($existingTrees->data as $tree) {
-                if (isset($tree->name) && $tree->name === $name) {
-                    $existingId = $tree->{'.id'};
-                    break;
-                }
-            }
-        }
-
-        $params = [
-            'name' => $name,
-            'parent' => $parent,
-            'max-limit' => $maxLimit,
-        ];
-
-        if (isset($options['priority'])) $params['priority'] = $options['priority'];
-        if (isset($options['comment'])) $params['comment'] = $options['comment'];
-
-        if ($existingId) {
-            // Update existing
-            $result = $this->router->APIUpdateQueueTree($existingId, $params);
-            $res->queue_tree_id = $existingId;
-        } else {
-            // Create new
-            $result = $this->router->APICreateQueueTree($params);
-            if ($result->success && isset($result->data->{'.id'})) {
-                $res->queue_tree_id = $result->data->{'.id'};
-            }
-        }
-
-        $res->success = $result->success;
-        $res->message = $result->message ?? ($result->error ?? '');
         return $res;
     }
 
@@ -400,20 +322,25 @@ class MuniSyncService extends BaseService
             }
 
             // Step 2: Sync per-department whitelist via firewall address-lists
+            // Uses individual user IPs (flat network), not subnet ranges
             $departments = $this->model->getDepartments($this->routerId);
 
             foreach ($departments as $dept) {
                 $whitelist = $this->model->getDeptWhitelist($dept['id']);
                 $listName = 'muni-whitelist-' . sanitizeQueueName($dept['name']);
 
-                foreach ($whitelist as $entry) {
-                    // Add whitelisted domain's IPs to address list
-                    // Note: We add the department's IP range to a whitelist address-list
-                    // The firewall rule will match src-address-list + dst and ACCEPT before DNS redirect
+                if (empty($whitelist)) {
+                    continue;
+                }
+
+                // Get active user IPs for this department
+                $users = $this->model->getUsersByDepartment($dept['id']);
+
+                foreach ($users as $user) {
                     $result = $this->router->APIAddFirewallAddress(
-                        $dept['ip_range'],
+                        $user['ip_address'],
                         $listName,
-                        'Whitelist: ' . $entry['domain'] . ' for ' . $dept['name']
+                        'Whitelist user: ' . $user['name'] . ' (' . $dept['name'] . ')'
                     );
 
                     if ($result->success || (isset($result->message) && strpos($result->message, 'already exists') !== false)) {
@@ -422,7 +349,8 @@ class MuniSyncService extends BaseService
                         $res->errors[] = [
                             'type' => 'whitelist',
                             'dept' => $dept['name'],
-                            'domain' => $entry['domain'],
+                            'user' => $user['name'],
+                            'ip' => $user['ip_address'],
                             'error' => $result->message ?? 'desconocido',
                         ];
                     }
@@ -443,7 +371,8 @@ class MuniSyncService extends BaseService
     // =============================================
 
     /**
-     * Full sync: all user queues + QoS hierarchy + content filtering
+     * Full sync: all user queues (Simple Queues) + content filtering
+     * Note: Queue Trees are managed by Digicom (DESCARGAS/SUBIDAS) — we only read their status
      */
     public function syncAll(): object
     {
@@ -451,17 +380,17 @@ class MuniSyncService extends BaseService
             'success' => false,
             'results' => [
                 'queues' => null,
-                'qos' => null,
+                'qos_status' => null,
                 'filtering' => null,
             ],
         ];
 
         if (!$this->connectRouter()) {
-            $res->message = 'No se pudo conectar al router';
+            $res->message = 'No se pudo conectar al router. Verifique que la API REST este habilitada.';
             return $res;
         }
 
-        // 1. Sync all department queues (users)
+        // 1. Sync all department queues (Simple Queues per user)
         $departments = $this->model->getDepartments($this->routerId);
         $queueResults = (object) ['synced' => 0, 'errors' => []];
 
@@ -472,21 +401,135 @@ class MuniSyncService extends BaseService
         }
         $res->results['queues'] = $queueResults;
 
-        // 2. Sync QoS hierarchy
-        $res->results['qos'] = $this->syncQoSHierarchy();
+        // 2. Read QoS status (read-only, no modifications)
+        $res->results['qos_status'] = $this->getQoSStatus();
 
         // 3. Sync content filtering
         $res->results['filtering'] = $this->syncContentFiltering();
 
         $res->success = true;
         $res->message = sprintf(
-            'Sync completo. Colas: %d, QoS deptos: %d, Dominios bloqueados: %d',
+            'Sync completo. Colas: %d, Queue Trees: %d, Dominios bloqueados: %d',
             $queueResults->synced,
-            $res->results['qos']->synced ?? 0,
+            count($res->results['qos_status']->trees ?? []),
             $res->results['filtering']->blocked ?? 0
         );
 
         return $res;
+    }
+
+    // =============================================
+    // BANDWIDTH STATS (Real-time from Router)
+    // =============================================
+
+    /**
+     * Get bandwidth stats from Simple Queues (real-time from router)
+     * Parses MikroTik queue stats and cross-references with DB for metadata
+     */
+    public function getBandwidthStats(): object
+    {
+        $res = (object) [
+            'success' => false,
+            'queues' => [],
+            'total_download' => 0,
+            'total_upload' => 0,
+            'active_count' => 0,
+            'disabled_count' => 0,
+            'message' => '',
+        ];
+
+        if (!$this->connectRouter()) {
+            $res->message = 'No se pudo conectar al router';
+            return $res;
+        }
+
+        try {
+            $apiResult = $this->router->APIListQueuesSimple();
+
+            if (!$apiResult->success || !is_array($apiResult->data)) {
+                $res->message = 'No se pudieron leer las Simple Queues';
+                return $res;
+            }
+
+            // Get all muni users for cross-referencing
+            $allUsers = $this->model->getUsers([]);
+            $usersByQueue = [];
+            foreach ($allUsers as $u) {
+                if (!empty($u['queue_name'])) {
+                    $usersByQueue[$u['queue_name']] = $u;
+                }
+            }
+
+            foreach ($apiResult->data as $queue) {
+                $name = $queue->name ?? '';
+                $target = $queue->target ?? '';
+                $maxLimit = $queue->{'max-limit'} ?? '0/0';
+                $bytesStr = $queue->bytes ?? '0/0';
+                $disabled = isset($queue->disabled) && ($queue->disabled === 'true' || $queue->disabled === true);
+
+                // Parse bytes "upload/download" format
+                $bytesParts = $this->parseQueueBytes($bytesStr);
+                $limitParts = explode('/', $maxLimit);
+
+                // Try to match with a muni user by queue name
+                $userName = $name;
+
+                if (isset($usersByQueue[$name])) {
+                    $u = $usersByQueue[$name];
+                    $userName = $u['name'] ?? $name;
+                }
+
+                // Extract IP from target (remove /32)
+                $ip = str_replace('/32', '', $target);
+
+                $queueData = [
+                    'name' => $userName,
+                    'queue_name' => $name,
+                    'ip' => $ip,
+                    'upload_bytes' => $bytesParts['upload'],
+                    'download_bytes' => $bytesParts['download'],
+                    'max_limit' => $maxLimit,
+                    'max_upload' => $limitParts[0] ?? '0',
+                    'max_download' => $limitParts[1] ?? '0',
+                    'disabled' => $disabled,
+                ];
+
+                $res->queues[] = $queueData;
+
+                if ($disabled) {
+                    $res->disabled_count++;
+                } else {
+                    $res->active_count++;
+                }
+
+                $res->total_download += $bytesParts['download'];
+                $res->total_upload += $bytesParts['upload'];
+            }
+
+            // Sort queues by download bytes descending (top consumers first)
+            usort($res->queues, function ($a, $b) {
+                return $b['download_bytes'] - $a['download_bytes'];
+            });
+
+            $res->success = true;
+            $res->message = 'Stats obtenidos: ' . count($res->queues) . ' queues';
+        } catch (Exception $e) {
+            $res->message = 'Excepcion: ' . $e->getMessage();
+        }
+
+        return $res;
+    }
+
+    /**
+     * Parse MikroTik bytes format "upload/download" into integers
+     */
+    private function parseQueueBytes(string $bytesStr): array
+    {
+        $parts = explode('/', $bytesStr);
+        return [
+            'upload' => intval($parts[0] ?? 0),
+            'download' => intval($parts[1] ?? 0),
+        ];
     }
 
     // =============================================

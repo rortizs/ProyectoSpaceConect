@@ -96,8 +96,8 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Departamento <span class="text-danger">*</span></label>
-                                <select class="form-control" id="userDepartment" name="department_id" required>
+                                <label>Departamento</label>
+                                <select class="form-control" id="userDepartment" name="department_id">
                                     <option value="">Seleccionar...</option>
                                 </select>
                             </div>

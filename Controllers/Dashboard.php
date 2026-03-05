@@ -14,6 +14,12 @@ class Dashboard extends Controllers
   }
   public function dashboard()
   {
+    // Municipal-only user: redirect to muni dashboard
+    if (!empty($_SESSION['permits'][MUNI]['v']) && empty($_SESSION['permits'][CLIENTS]['v'])) {
+      header('Location: ' . base_url() . '/munidashboard');
+      die();
+    }
+
     if (empty($_SESSION['permits_module']['v'])) {
       $data['page_name'] = "Página en blanco";
       $data['page_title'] = "Página en blanco";

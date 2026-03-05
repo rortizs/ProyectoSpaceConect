@@ -394,16 +394,37 @@ function syncDeptQueues(encDeptId) {
     });
 }
 
-function syncQoS() {
+function loadQoSStatus() {
     let routerId = $('#bwRouter').val();
     if (!routerId) { Swal.fire('Error', 'Seleccione un router.', 'warning'); return; }
 
-    Swal.fire({ title: 'Sincronizando QoS...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-    $.post(base_url + '/munired/syncQoS', { router_id: routerId }, function (response) {
+    $.post(base_url + '/munired/getQoSStatus', { router_id: routerId }, function (response) {
         let res = JSON.parse(response);
-        Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
-        loadBandwidthTable();
+        if (res.status === 'success') {
+            let trees = res.data.trees || [];
+            let tbody = $('#tableQoSTrees tbody');
+            tbody.empty();
+
+            if (trees.length === 0) {
+                tbody.append('<tr><td colspan="5" class="text-center text-muted">No se encontraron Queue Trees</td></tr>');
+            } else {
+                trees.forEach(function (t) {
+                    tbody.append(`
+                        <tr>
+                            <td><strong>${t.name}</strong></td>
+                            <td>${t.parent || 'global'}</td>
+                            <td><code>${t.max_limit || 'N/A'}</code></td>
+                            <td class="text-center">${t.priority || '-'}</td>
+                            <td><small>${t.comment || ''}</small></td>
+                        </tr>
+                    `);
+                });
+            }
+
+            $('#qosStatusPanel').slideDown();
+        } else {
+            Swal.fire('Error', res.msg || 'No se pudo leer el estado QoS. Verifique que la API del router este habilitada.', 'error');
+        }
     });
 }
 
@@ -624,8 +645,20 @@ function testRouterConnection(routerId) {
         if (res.connected) {
             let d = res.data;
             Swal.fire('Conectado', `Version: ${d.version}\nBoard: ${d.board_name}\nCPU: ${d.cpu_load}%\nUptime: ${d.uptime}`, 'success');
+
+            // Update dynamic info panel if on config page
+            let infoHtml = `
+                <table class="table table-sm mb-0">
+                    <tr><td><strong>Version</strong></td><td>${d.version}</td></tr>
+                    <tr><td><strong>Board</strong></td><td>${d.board_name}</td></tr>
+                    <tr><td><strong>CPU</strong></td><td>${d.cpu_load}%</td></tr>
+                    <tr><td><strong>Memoria</strong></td><td>${d.free_memory ? Math.round(d.free_memory / 1024 / 1024) + ' MB libre' : 'N/A'}</td></tr>
+                    <tr><td><strong>Uptime</strong></td><td>${d.uptime}</td></tr>
+                </table>
+            `;
+            $('#routerStatusInfo').html(infoHtml);
         } else {
-            Swal.fire('Error', res.msg || 'No se pudo conectar', 'error');
+            Swal.fire('Error', res.msg || 'No se pudo conectar. Verifique que la API REST este habilitada en el router.', 'error');
         }
     });
 }
@@ -642,15 +675,30 @@ function syncAllFromConfig() {
     });
 }
 
-function syncQoSFromConfig() {
+function loadQoSFromConfig() {
     let routerId = $('#configRouter').val();
     if (!routerId) { Swal.fire('Error', 'Seleccione un router.', 'warning'); return; }
 
-    Swal.fire({ title: 'Sincronizando QoS...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-    $.post(base_url + '/munired/syncQoS', { router_id: routerId }, function (response) {
+    $.post(base_url + '/munired/getQoSStatus', { router_id: routerId }, function (response) {
         let res = JSON.parse(response);
-        Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
+        if (res.status === 'success') {
+            let trees = res.data.trees || [];
+            let html = '';
+
+            if (trees.length === 0) {
+                html = '<p class="text-muted">No se encontraron Queue Trees en el router.</p>';
+            } else {
+                html = '<table class="table table-sm table-bordered"><thead class="thead-light"><tr><th>Nombre</th><th>Parent</th><th>Max Limit</th><th>Prioridad</th></tr></thead><tbody>';
+                trees.forEach(function (t) {
+                    html += `<tr><td>${t.name}</td><td>${t.parent || 'global'}</td><td><code>${t.max_limit || 'N/A'}</code></td><td>${t.priority || '-'}</td></tr>`;
+                });
+                html += '</tbody></table>';
+            }
+
+            $('#configQoSPanel').html(html);
+        } else {
+            $('#configQoSPanel').html('<div class="alert alert-warning">' + (res.msg || 'No se pudo conectar. Verifique que la API del router este habilitada.') + '</div>');
+        }
     });
 }
 

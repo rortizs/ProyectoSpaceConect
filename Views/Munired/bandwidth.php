@@ -26,8 +26,8 @@
                 </select>
             </div>
             <div class="col-md-8 text-right">
-                <button class="btn btn-warning btn-sm" onclick="syncQoS()">
-                    <i class="fas fa-project-diagram"></i> Sincronizar QoS
+                <button class="btn btn-outline-secondary btn-sm" onclick="loadQoSStatus()">
+                    <i class="fas fa-project-diagram"></i> Ver Queue Trees
                 </button>
                 <button class="btn btn-info btn-sm" onclick="syncAllQueues()">
                     <i class="fas fa-sync-alt"></i> Sincronizar Colas
@@ -39,12 +39,35 @@
         <div class="row">
             <div class="col-md-12">
                 <div class="tile">
-                    <h3 class="tile-title"><i class="fas fa-project-diagram"></i> Jerarquia QoS (Queue Tree)</h3>
+                    <h3 class="tile-title"><i class="fas fa-project-diagram"></i> Ancho de Banda por Departamento</h3>
                     <div class="tile-body">
-                        <div class="alert alert-info">
+                        <div class="alert alert-secondary">
                             <i class="fas fa-info-circle"></i>
-                            <strong>Estructura:</strong> Queue Tree padre <code>muni-global</code> (37M/251M) &rarr; un hijo por departamento con su limite maximo.
-                            Cada usuario tiene su Simple Queue individual.
+                            <strong>Queue Trees:</strong> Administrados por Digicom (DESCARGAS/SUBIDAS). Use el boton "Ver Queue Trees" para consultar el estado actual.
+                            Los Simple Queues por usuario se gestionan desde este panel.
+                        </div>
+
+                        <!-- QoS Status Panel (read-only, loaded on demand) -->
+                        <div id="qosStatusPanel" style="display: none;" class="mb-3">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <i class="fas fa-project-diagram"></i> Queue Trees del Router (solo lectura)
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-sm table-bordered mb-0" id="tableQoSTrees">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Parent</th>
+                                                <th>Max Limit</th>
+                                                <th>Prioridad</th>
+                                                <th>Comentario</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="table-responsive">

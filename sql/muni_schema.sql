@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `muni_departments` (
   `router_id` int(11) NOT NULL COMMENT 'FK to network_routers',
   `name` varchar(100) NOT NULL COMMENT 'Department name (e.g., Finanzas, RRHH)',
   `description` text COMMENT 'Department description',
-  `ip_range` varchar(50) NOT NULL COMMENT 'CIDR notation (e.g., 10.0.2.0/24)',
+  `ip_range` varchar(50) NOT NULL COMMENT 'Simple range: start-end (e.g., 192.168.88.10-192.168.88.50)',
   `priority` tinyint(4) NOT NULL DEFAULT 4 COMMENT 'MikroTik queue priority 1-8 (1=highest)',
   `default_upload` varchar(20) DEFAULT '5M' COMMENT 'Default upload limit for users',
   `default_download` varchar(20) DEFAULT '10M' COMMENT 'Default download limit for users',
@@ -20,9 +20,9 @@ CREATE TABLE IF NOT EXISTS `muni_departments` (
   `burst_threshold_up` varchar(20) DEFAULT NULL COMMENT 'Burst threshold upload',
   `burst_threshold_down` varchar(20) DEFAULT NULL COMMENT 'Burst threshold download',
   `burst_time` varchar(20) DEFAULT NULL COMMENT 'Burst time (e.g., 8s/4s)',
-  `qos_max_limit` varchar(40) DEFAULT NULL COMMENT 'Queue Tree max-limit for this dept',
-  `qos_queue_tree_id` varchar(20) DEFAULT NULL COMMENT 'MikroTik .id reference for Queue Tree',
-  `qos_sync_status` enum('pending','synced','error') DEFAULT 'pending' COMMENT 'QoS sync state',
+  `qos_max_limit` varchar(40) DEFAULT NULL COMMENT 'Dept bandwidth cap reference (informational, Queue Trees managed by Digicom)',
+  `qos_queue_tree_id` varchar(20) DEFAULT NULL COMMENT 'Legacy: MikroTik .id reference (Queue Trees now read-only)',
+  `qos_sync_status` enum('pending','synced','error') DEFAULT 'pending' COMMENT 'Legacy: QoS sync state (Queue Trees now read-only)',
   `status` tinyint(4) DEFAULT 1 COMMENT '1=active, 0=inactive',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -39,13 +39,13 @@ CREATE TABLE IF NOT EXISTS `muni_departments` (
 -- =============================================
 CREATE TABLE IF NOT EXISTS `muni_users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `department_id` int(11) NOT NULL COMMENT 'FK to muni_departments',
+  `department_id` int(11) DEFAULT NULL COMMENT 'FK to muni_departments (optional grouping)',
   `router_id` int(11) NOT NULL COMMENT 'FK to network_routers',
   `name` varchar(150) NOT NULL COMMENT 'Full name of office user',
   `ip_address` varchar(45) NOT NULL COMMENT 'Static IP assigned to user',
   `mac_address` varchar(17) DEFAULT NULL COMMENT 'MAC address (AA:BB:CC:DD:EE:FF)',
-  `custom_upload` varchar(20) DEFAULT NULL COMMENT 'Custom upload limit (NULL = dept default)',
-  `custom_download` varchar(20) DEFAULT NULL COMMENT 'Custom download limit (NULL = dept default)',
+  `custom_upload` varchar(20) DEFAULT '5M' COMMENT 'Upload limit',
+  `custom_download` varchar(20) DEFAULT '10M' COMMENT 'Download limit',
   `queue_name` varchar(100) DEFAULT NULL COMMENT 'MikroTik Simple Queue name reference',
   `queue_sync_status` enum('pending','synced','error','disabled') DEFAULT 'pending' COMMENT 'Queue sync state',
   `status` tinyint(4) DEFAULT 1 COMMENT '1=active, 0=disabled',
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS `muni_users` (
   KEY `fk_user_router` (`router_id`),
   KEY `idx_user_status` (`status`),
   KEY `idx_user_dept_status` (`department_id`, `status`),
-  CONSTRAINT `fk_user_dept` FOREIGN KEY (`department_id`) REFERENCES `muni_departments` (`id`),
+  CONSTRAINT `fk_user_dept` FOREIGN KEY (`department_id`) REFERENCES `muni_departments` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_user_router` FOREIGN KEY (`router_id`) REFERENCES `network_routers` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

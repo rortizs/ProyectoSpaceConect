@@ -1,12 +1,43 @@
 /**
  * Municipal Dashboard - JS Functions
+ * Dashboard simplificado: empleados + consumo en tiempo real
  */
 
 let selectedRouterId = null;
+let routerConnected = false;
 
 document.addEventListener('DOMContentLoaded', function () {
     loadRouters();
 });
+
+// =============================================
+// HELPERS
+// =============================================
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    const idx = Math.min(i, units.length - 1);
+    return (bytes / Math.pow(1024, idx)).toFixed(2) + ' ' + units[idx];
+}
+
+function parseMikroTikRate(rateStr) {
+    if (!rateStr) return 0;
+    rateStr = rateStr.toString().trim().toUpperCase();
+    let multiplier = 1;
+    if (rateStr.endsWith('K')) { multiplier = 1024; rateStr = rateStr.slice(0, -1); }
+    else if (rateStr.endsWith('M')) { multiplier = 1024 * 1024; rateStr = rateStr.slice(0, -1); }
+    else if (rateStr.endsWith('G')) { multiplier = 1024 * 1024 * 1024; rateStr = rateStr.slice(0, -1); }
+    return parseFloat(rateStr) * multiplier || 0;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    let div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 
 // =============================================
 // DATA LOADING
@@ -22,7 +53,6 @@ function loadRouters() {
             select.append(`<option value="${r.id}">${r.name} (${r.ip})</option>`);
         });
 
-        // Auto-select first router
         if (routers.length > 0) {
             select.val(routers[0].id).trigger('change');
         }
@@ -32,64 +62,83 @@ function loadRouters() {
 $('#selectRouter').on('change', function () {
     selectedRouterId = $(this).val();
     if (selectedRouterId) {
-        loadStats();
-        loadDepartmentSummary();
+        loadBandwidthStats();
         loadAlerts();
         checkRouterStatus();
     }
 });
 
-function loadStats() {
-    $.post(base_url + '/munidashboard/getStats', { router_id: selectedRouterId }, function (response) {
+function loadBandwidthStats() {
+    $.post(base_url + '/munidashboard/getBandwidthStats', { router_id: selectedRouterId }, function (response) {
         let res = JSON.parse(response);
+
         if (res.status === 'success') {
-            let d = res.data;
-            $('#statActiveUsers').text(d.active_users);
-            $('#statDepartments').text(d.total_departments);
-            $('#statPendingSync').text(d.pending_sync);
-            $('#statSyncErrors').text(d.sync_errors);
-            $('#statBlockedDomains').text(d.blocked_domains);
-            $('#statCategories').text(d.total_categories);
+            routerConnected = true;
+            $('#routerOfflineAlert').hide();
+
+            // Update stat cards
+            $('#statActiveUsers').text(res.data.active_count);
+            $('#statDisabledUsers').text(res.data.disabled_count);
+            $('#statTotalConsumption').text(formatBytes(res.data.total_download));
+            $('#bandwidthTimestamp').text('Actualizado: ' + new Date().toLocaleTimeString());
+
+            // Populate top consumers table
+            renderTopConsumers(res.data.queues);
+        } else {
+            // Router offline — fallback to DB stats
+            routerConnected = false;
+            $('#routerOfflineAlert').show();
+            $('#statTotalConsumption').text('--');
+
+            $.post(base_url + '/munidashboard/getStats', { router_id: selectedRouterId }, function (r2) {
+                let r2d = JSON.parse(r2);
+                if (r2d.status === 'success') {
+                    $('#statActiveUsers').text(r2d.data.active_users);
+                    $('#statDisabledUsers').text(r2d.data.disabled_users || 0);
+                }
+            });
+
+            $('#topConsumersBody').html(
+                '<tr><td colspan="7" class="text-center text-muted">' +
+                '<i class="fas fa-exclamation-triangle text-warning"></i> ' +
+                'Router desconectado — datos de consumo no disponibles</td></tr>'
+            );
         }
+    }).fail(function () {
+        routerConnected = false;
+        $('#routerOfflineAlert').show();
+        $('#topConsumersBody').html(
+            '<tr><td colspan="7" class="text-center text-danger">Error al conectar con el servidor</td></tr>'
+        );
     });
 }
 
-function loadDepartmentSummary() {
-    $.post(base_url + '/munidashboard/getDepartmentSummary', { router_id: selectedRouterId }, function (response) {
-        let res = JSON.parse(response);
-        let container = $('#departmentCards');
-        container.empty();
+function renderTopConsumers(queues) {
+    let tbody = $('#topConsumersBody');
+    tbody.empty();
 
-        if (res.status === 'success' && res.data.length > 0) {
-            res.data.forEach(function (dept) {
-                let statusClass = dept.status == 1 ? 'border-success' : 'border-danger';
-                let qosClass = dept.qos_sync_status === 'synced' ? 'text-success' : (dept.qos_sync_status === 'error' ? 'text-danger' : 'text-warning');
-                let qosIcon = dept.qos_sync_status === 'synced' ? 'fa-check-circle' : (dept.qos_sync_status === 'error' ? 'fa-exclamation-circle' : 'fa-clock');
+    if (!queues || queues.length === 0) {
+        tbody.html('<tr><td colspan="7" class="text-center text-muted">No hay queues activas</td></tr>');
+        return;
+    }
 
-                container.append(`
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="card ${statusClass}" style="border-left-width: 4px;">
-                            <div class="card-body p-3">
-                                <h6 class="card-title mb-1">
-                                    <i class="fas fa-building"></i> ${dept.name}
-                                </h6>
-                                <div class="d-flex justify-content-between">
-                                    <small>P: <strong>${dept.priority}</strong></small>
-                                    <small>Usuarios: <strong>${dept.active_users}</strong></small>
-                                </div>
-                                <div class="d-flex justify-content-between mt-1">
-                                    <small>${dept.default_upload}/${dept.default_download}</small>
-                                    <small class="${qosClass}"><i class="fas ${qosIcon}"></i> QoS</small>
-                                </div>
-                                ${dept.error_users > 0 ? `<small class="text-danger"><i class="fas fa-exclamation-triangle"></i> ${dept.error_users} errores</small>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `);
-            });
-        } else {
-            container.html('<div class="col-12 text-center text-muted"><i class="fas fa-inbox"></i> No hay departamentos configurados.</div>');
-        }
+    let top = queues.slice(0, 10);
+    top.forEach(function (q, idx) {
+        let statusBadge = q.disabled
+            ? '<span class="badge badge-secondary">Inactivo</span>'
+            : '<span class="badge badge-success">Activo</span>';
+
+        tbody.append(`
+            <tr>
+                <td>${idx + 1}</td>
+                <td><strong>${escapeHtml(q.name)}</strong></td>
+                <td><code>${q.ip}</code></td>
+                <td>${formatBytes(q.download_bytes)}</td>
+                <td>${formatBytes(q.upload_bytes)}</td>
+                <td><small>${q.max_limit}</small></td>
+                <td>${statusBadge}</td>
+            </tr>
+        `);
     });
 }
 
@@ -106,8 +155,8 @@ function loadAlerts() {
                 list.append(`
                     <li class="list-group-item py-2">
                         <i class="fas ${icon}"></i>
-                        <strong>${alert.action}</strong>
-                        ${alert.details ? ' - ' + alert.details.substring(0, 80) : ''}
+                        <strong>${escapeHtml(alert.action)}</strong>
+                        ${alert.details ? ' - ' + escapeHtml(alert.details.substring(0, 80)) : ''}
                         <small class="text-muted float-right">${time}</small>
                     </li>
                 `);
@@ -122,22 +171,22 @@ function checkRouterStatus() {
     $.post(base_url + '/munidashboard/getRouterStatus', { router_id: selectedRouterId }, function (response) {
         let res = JSON.parse(response);
         let badge = $('#routerStatusBadge');
-        let info = $('#routerInfo');
 
         if (res.connected) {
             badge.removeClass('badge-secondary badge-danger').addClass('badge-success').text('Conectado');
+
             let d = res.data;
-            info.html(`
-                <table class="table table-sm mb-0">
-                    <tr><td>Version</td><td><strong>${d.version}</strong></td></tr>
-                    <tr><td>Board</td><td>${d.board_name}</td></tr>
-                    <tr><td>CPU</td><td>${d.cpu_load}%</td></tr>
-                    <tr><td>Uptime</td><td>${d.uptime}</td></tr>
-                </table>
-            `);
+            let cpuLoad = d.cpu_load || 0;
+            let cpuColor = cpuLoad > 80 ? '#dc3545' : (cpuLoad > 50 ? '#ffc107' : '#28a745');
+
+            $('#routerStatusCard').css('border-left-color', cpuColor);
+            $('#routerStatusIcon').css('background', cpuColor);
+            $('#statRouterStatus').html(cpuLoad + '% CPU');
         } else {
             badge.removeClass('badge-secondary badge-success').addClass('badge-danger').text('Desconectado');
-            info.html('<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> ' + (res.msg || 'No se pudo conectar') + '</p>');
+            $('#routerStatusCard').css('border-left-color', '#dc3545');
+            $('#routerStatusIcon').css('background', '#dc3545');
+            $('#statRouterStatus').text('Offline');
         }
     });
 }
@@ -174,7 +223,6 @@ function quickBlock() {
                 if (res.status === 'success') {
                     Swal.fire('Bloqueado', res.msg, 'success');
                     $('#quickBlockDomain').val('');
-                    loadStats();
                 } else {
                     Swal.fire('Error', res.msg, 'error');
                 }
@@ -191,7 +239,7 @@ function syncAll() {
 
     Swal.fire({
         title: 'Sincronizar todo?',
-        text: 'Esto sincronizara colas de usuarios, QoS y filtrado con el router.',
+        text: 'Esto sincronizara colas de usuarios y filtrado con el router.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Si, sincronizar',
@@ -203,8 +251,7 @@ function syncAll() {
             $.post(base_url + '/munired/syncAll', { router_id: selectedRouterId }, function (response) {
                 let res = JSON.parse(response);
                 Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
-                loadStats();
-                loadDepartmentSummary();
+                loadBandwidthStats();
                 loadAlerts();
             });
         }

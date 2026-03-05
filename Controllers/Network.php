@@ -27,6 +27,7 @@ class Network extends Controllers
         $data['records'] = array();
         $data['zones'] = array();
 
+        session_write_close(); // Release session lock before router connection loop
 
         $mode_label = [];
         $mode_label["1"] = "Simple Queues";

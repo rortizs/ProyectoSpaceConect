@@ -207,6 +207,78 @@ function getUsableIpsFromCidr(string $cidr): array
     return $ips;
 }
 
+// =============================================
+// Simple Range Helpers (Municipal Module - Flat Network)
+// =============================================
+
+function ipInRange(string $ip, string $rangeStart, string $rangeEnd): bool
+{
+    $ip_long = ip2long($ip);
+    $start_long = ip2long($rangeStart);
+    $end_long = ip2long($rangeEnd);
+
+    if ($ip_long === false || $start_long === false || $end_long === false) {
+        return false;
+    }
+
+    return $ip_long >= $start_long && $ip_long <= $end_long;
+}
+
+function parseSimpleRange(string $range): ?array
+{
+    $parts = explode('-', $range, 2);
+    if (count($parts) !== 2) {
+        return null;
+    }
+
+    $start = trim($parts[0]);
+    $end = trim($parts[1]);
+
+    if (ip2long($start) === false || ip2long($end) === false) {
+        return null;
+    }
+
+    if (ip2long($start) > ip2long($end)) {
+        return null;
+    }
+
+    return ['start' => $start, 'end' => $end];
+}
+
+function getUsableIpsFromRange(string $rangeStart, string $rangeEnd): array
+{
+    $start_long = ip2long($rangeStart);
+    $end_long = ip2long($rangeEnd);
+
+    if ($start_long === false || $end_long === false || $start_long > $end_long) {
+        return [];
+    }
+
+    $ips = [];
+    for ($i = $start_long; $i <= $end_long; $i++) {
+        $ips[] = long2ip($i);
+    }
+
+    return $ips;
+}
+
+function simpleRangesOverlap(string $range1, string $range2): bool
+{
+    $r1 = parseSimpleRange($range1);
+    $r2 = parseSimpleRange($range2);
+
+    if ($r1 === null || $r2 === null) {
+        return false;
+    }
+
+    $r1Start = ip2long($r1['start']);
+    $r1End = ip2long($r1['end']);
+    $r2Start = ip2long($r2['start']);
+    $r2End = ip2long($r2['end']);
+
+    return $r1Start <= $r2End && $r2Start <= $r1End;
+}
+
 function sanitizeQueueName(string $name): string
 {
     $name = mb_strtolower($name, 'UTF-8');
