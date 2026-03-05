@@ -331,6 +331,7 @@ class Munired extends Controllers
                         $response = ['status' => 'success', 'msg' => $id == 0 ? 'Usuario creado exitosamente.' : 'Usuario actualizado.'];
 
                         // Auto-sync queue after save
+                        session_write_close(); // Release session lock before router call
                         $this->initSyncService($userData['router_id']);
                         if ($this->syncService) {
                             $userId = $id > 0 ? $id : $this->getLastUserId();
@@ -367,6 +368,7 @@ class Munired extends Controllers
                 // Remove queue from router first
                 $user = $this->model->getUser($id);
                 if (!empty($user)) {
+                    session_write_close(); // Release session lock before router call
                     $this->initSyncServiceFromDept($user['department_id']);
                     if ($this->syncService) {
                         $this->syncService->removeUserQueue($id);
@@ -399,6 +401,7 @@ class Munired extends Controllers
                     // Toggle queue on router
                     $user = $this->model->getUser($id);
                     if (!empty($user)) {
+                        session_write_close(); // Release session lock before router call
                         $this->initSyncServiceFromDept($user['department_id']);
                         if ($this->syncService) {
                             $this->syncService->toggleUserQueue($id, $status === 1);
@@ -422,6 +425,169 @@ class Munired extends Controllers
     }
 
     // =============================================
+    // EXPORT ENDPOINTS
+    // =============================================
+
+    public function exportUsers()
+    {
+        if (!$_SESSION['permits_module']['v']) {
+            die('Sin permisos.');
+        }
+
+        $filters = [
+            'department_id' => !empty($_POST['department_id']) ? intval($_POST['department_id']) : null,
+            'status' => isset($_POST['status']) ? $_POST['status'] : '',
+            'search' => !empty($_POST['search']) ? $_POST['search'] : '',
+        ];
+
+        $data = $this->model->getUsers($filters);
+
+        // Build clean data rows (no HTML)
+        $rows = [];
+        foreach ($data as $u) {
+            $effectiveUpload = !empty($u['custom_upload']) ? $u['custom_upload'] : ($u['effective_upload'] ?? '5M');
+            $effectiveDownload = !empty($u['custom_download']) ? $u['custom_download'] : ($u['effective_download'] ?? '10M');
+            $statusText = $u['status'] == 1 ? 'Activo' : 'Inactivo';
+
+            $rows[] = [
+                'name' => $u['name'],
+                'department' => $u['department_name'] ?? 'Sin departamento',
+                'ip' => $u['ip_address'],
+                'mac' => $u['mac_address'] ?? '-',
+                'upload' => $effectiveUpload,
+                'download' => $effectiveDownload,
+                'status' => $statusText,
+            ];
+        }
+
+        $format = $_POST['format'] ?? 'excel';
+        $date = date('Y-m-d');
+
+        if ($format === 'excel') {
+            $this->exportUsersCSV($rows, $date);
+        } else {
+            $this->exportUsersPrintHTML($rows, $date);
+        }
+    }
+
+    private function exportUsersCSV(array $rows, string $date): void
+    {
+        $filename = "usuarios_$date.csv";
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        // UTF-8 BOM for Excel compatibility
+        echo "\xEF\xBB\xBF";
+
+        $output = fopen('php://output', 'w');
+
+        // Header row
+        fputcsv($output, ['Nombre', 'Departamento', 'IP', 'MAC', 'Upload', 'Download', 'Estado'], ';');
+
+        // Data rows
+        foreach ($rows as $row) {
+            fputcsv($output, [
+                $row['name'],
+                $row['department'],
+                $row['ip'],
+                $row['mac'],
+                $row['upload'],
+                $row['download'],
+                $row['status'],
+            ], ';');
+        }
+
+        fclose($output);
+        die();
+    }
+
+    private function exportUsersPrintHTML(array $rows, string $date): void
+    {
+        $totalUsers = count($rows);
+        $activeUsers = count(array_filter($rows, function ($r) { return $r['status'] === 'Activo'; }));
+
+        ?>
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Usuarios de Red Municipal - <?= $date; ?></title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #333; padding: 20px; }
+                .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+                .header h1 { font-size: 18px; margin-bottom: 4px; }
+                .header p { font-size: 11px; color: #666; }
+                .summary { margin-bottom: 15px; font-size: 11px; }
+                .summary span { margin-right: 20px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #999; padding: 5px 8px; text-align: left; }
+                th { background-color: #f0f0f0; font-weight: bold; font-size: 11px; }
+                td { font-size: 11px; }
+                tr:nth-child(even) { background-color: #fafafa; }
+                .status-active { color: #28a745; font-weight: bold; }
+                .status-inactive { color: #dc3545; font-weight: bold; }
+                .footer { margin-top: 15px; text-align: center; font-size: 10px; color: #999; }
+                @media print {
+                    body { padding: 10px; }
+                    @page { margin: 10mm; size: landscape; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Reporte de Usuarios - Red Municipal</h1>
+                <p>Generado el <?= $date; ?> a las <?= date('H:i:s'); ?></p>
+            </div>
+            <div class="summary">
+                <span><strong>Total de usuarios:</strong> <?= $totalUsers; ?></span>
+                <span><strong>Activos:</strong> <?= $activeUsers; ?></span>
+                <span><strong>Inactivos:</strong> <?= ($totalUsers - $activeUsers); ?></span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Nombre</th>
+                        <th>Departamento</th>
+                        <th>IP</th>
+                        <th>MAC</th>
+                        <th>Upload</th>
+                        <th>Download</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($rows as $i => $row): ?>
+                    <tr>
+                        <td><?= ($i + 1); ?></td>
+                        <td><?= htmlspecialchars($row['name']); ?></td>
+                        <td><?= htmlspecialchars($row['department']); ?></td>
+                        <td><?= htmlspecialchars($row['ip']); ?></td>
+                        <td><?= htmlspecialchars($row['mac']); ?></td>
+                        <td><?= htmlspecialchars($row['upload']); ?></td>
+                        <td><?= htmlspecialchars($row['download']); ?></td>
+                        <td class="<?= $row['status'] === 'Activo' ? 'status-active' : 'status-inactive'; ?>">
+                            <?= $row['status']; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <div class="footer">
+                SpaceConect - Red Municipal &copy; <?= date('Y'); ?>
+            </div>
+            <script>window.onload = function() { window.print(); };</script>
+        </body>
+        </html>
+        <?php
+        die();
+    }
+
+    // =============================================
     // BANDWIDTH / QoS ENDPOINTS
     // =============================================
 
@@ -429,6 +595,7 @@ class Munired extends Controllers
     {
         if ($_POST && $_SESSION['permits_module']['a']) {
             $dept_id = intval(decrypt($_POST['dept_id']));
+            session_write_close(); // Release session lock before router call
             $this->initSyncServiceFromDept($dept_id);
 
             if (!$this->syncService) {
@@ -467,6 +634,7 @@ class Munired extends Controllers
                 die();
             }
 
+            session_write_close(); // Release session lock before router call
             $this->initSyncService($router_id);
 
             if (!$this->syncService) {
@@ -589,6 +757,7 @@ class Munired extends Controllers
     {
         if ($_POST && $_SESSION['permits_module']['a']) {
             $router_id = intval($_POST['router_id']);
+            session_write_close(); // Release session lock before router call
             $this->initSyncService($router_id);
 
             if (!$this->syncService) {
@@ -635,6 +804,7 @@ class Munired extends Controllers
     {
         if ($_POST && $_SESSION['permits_module']['a']) {
             $router_id = intval($_POST['router_id']);
+            session_write_close(); // Release session lock before router call
             $this->initSyncService($router_id);
 
             if (!$this->syncService) {

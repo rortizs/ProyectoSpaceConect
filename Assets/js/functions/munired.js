@@ -7,6 +7,12 @@ let currentSection = document.querySelector('main')?.dataset?.section || '';
 let tableDepartments, tableUsers;
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Hide loading overlay once DOM is ready
+    let divLoading = document.getElementById('divLoading');
+    if (divLoading) {
+        divLoading.style.display = 'none';
+    }
+
     // Detect current section from page_section data or URL
     let path = window.location.pathname;
     if (path.includes('/departments')) currentSection = 'departments';
@@ -59,12 +65,17 @@ function loadRouterSelects() {
 function loadDepartmentSelects() {
     $.post(base_url + '/munired/getDepartments', function (response) {
         let depts = JSON.parse(response);
+        // filteringDept uses encrypted IDs (controller decrypts)
+        // filterDepartment and userDepartment use raw IDs (controller expects int)
+        let encryptedSelects = ['filteringDept'];
         let selects = $('#filterDepartment, #userDepartment, #filteringDept');
         selects.each(function () {
             let $sel = $(this);
+            let useEncrypt = encryptedSelects.includes($sel.attr('id'));
             $sel.find('option:not(:first)').remove();
             depts.forEach(function (d) {
-                $sel.append(`<option value="${d.encrypt_id}">${d.name}</option>`);
+                let val = useEncrypt ? d.encrypt_id : d.id;
+                $sel.append(`<option value="${val}">${d.name}</option>`);
             });
         });
     });
@@ -226,6 +237,32 @@ function loadUsers() {
             pageLength: 25
         });
     });
+}
+
+function exportUsers(format) {
+    let form = document.createElement('form');
+    form.method = 'POST';
+    form.action = base_url + '/munired/exportUsers';
+    form.target = format === 'pdf' ? '_blank' : '_self';
+
+    let fields = {
+        format: format,
+        department_id: $('#filterDepartment').val() || '',
+        status: $('#filterStatus').val() || '',
+        search: $('#filterSearch').val() || ''
+    };
+
+    for (let key in fields) {
+        let input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = fields[key];
+        form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
 }
 
 $('#filterDepartment, #filterStatus').on('change', function () { loadUsers(); });
@@ -391,6 +428,8 @@ function syncDeptQueues(encDeptId) {
         let res = JSON.parse(response);
         Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
         loadBandwidthTable();
+    }).fail(function () {
+        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
     });
 }
 
@@ -438,6 +477,8 @@ function syncAllQueues() {
         let res = JSON.parse(response);
         Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
         loadBandwidthTable();
+    }).fail(function () {
+        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
     });
 }
 
@@ -603,6 +644,8 @@ function syncFilteringRules() {
     $.post(base_url + '/munired/syncFiltering', { router_id: routerId }, function (response) {
         let res = JSON.parse(response);
         Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
+    }).fail(function () {
+        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
     });
 }
 
@@ -660,6 +703,8 @@ function testRouterConnection(routerId) {
         } else {
             Swal.fire('Error', res.msg || 'No se pudo conectar. Verifique que la API REST este habilitada en el router.', 'error');
         }
+    }).fail(function () {
+        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
     });
 }
 
@@ -672,6 +717,8 @@ function syncAllFromConfig() {
     $.post(base_url + '/munired/syncAll', { router_id: routerId }, function (response) {
         let res = JSON.parse(response);
         Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
+    }).fail(function () {
+        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
     });
 }
 
@@ -711,6 +758,8 @@ function syncFilteringFromConfig() {
     $.post(base_url + '/munired/syncFiltering', { router_id: routerId }, function (response) {
         let res = JSON.parse(response);
         Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
+    }).fail(function () {
+        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
     });
 }
 

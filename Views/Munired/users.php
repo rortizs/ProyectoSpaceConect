@@ -36,6 +36,12 @@
                 <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Buscar por nombre o IP...">
             </div>
             <div class="col-md-4 text-right">
+                <button class="btn btn-outline-success btn-sm" onclick="exportUsers('excel')" title="Exportar a Excel">
+                    <i class="fas fa-file-excel"></i> Excel
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="exportUsers('pdf')" title="Exportar a PDF">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="loadUsers()">
                     <i class="fas fa-sync-alt"></i> Actualizar
                 </button>

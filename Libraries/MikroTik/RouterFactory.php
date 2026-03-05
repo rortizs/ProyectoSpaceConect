@@ -34,6 +34,11 @@ class RouterFactory
      */
     private static function autoDetectAndCreate($host, $port, $user, $password)
     {
+        // Port 443 = REST API (www-ssl), skip legacy detection
+        if ($port == 443) {
+            return new Router($host, $port, $user, $password, true);
+        }
+
         // Strategy 1: Try Legacy API first (more reliable for version detection)
         $legacy_router = new RouterLegacy($host, $port, $user, $password, true);
         
