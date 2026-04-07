@@ -7,10 +7,12 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="author" content="<?= DEVELOPER ?>">
     <meta name="theme-color" content="#00acac">
-    <meta http-equiv="Expires" content="0">
-    <meta http-equiv="Last-Modified" content="0">
-    <meta http-equiv="Cache-Control" content="no-cache, mustrevalidate">
-    <meta http-equiv="Pragma" content="no-cache">
+    
+    <!-- DNS Prefetch & Preconnect for performance -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
     <?php
     if (!empty($_SESSION['businessData']['favicon'])) {
         if ($_SESSION['businessData']['favicon'] == "favicon.png") {
@@ -26,26 +28,29 @@
     } else {
         $favicon = base_style() . '/images/logotypes/favicon.png';
     }
+    
+    // Version for cache busting (change only when assets actually change)
+    $assets_version = '1.0.0';
     ?>
     <!-- ================== INICIO ICONO ================== -->
     <link rel="icon" type="image/x-icon" href="<?= $favicon ?>">
     <!-- ================== FIN ICONO ===================== -->
     <!-- ================== INICIO ARCHIVOS CSS =========== -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" />
-    <link rel="stylesheet" href="<?= base_style() ?>/css/default/app.min.css">
-    <link rel="stylesheet" href="<?= base_style() ?>/css/datatables.min.css" />
-    <link rel="stylesheet" href="<?= base_style() ?>/css/superwisp.css">
-    <link rel="stylesheet" href="<?= base_style() ?>/css/jquery-confirm.min.css">
-    <link rel="stylesheet" href="<?= base_style() ?>/css/gritter.css">
-    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/simple-line-icons/css/simple-line-icons.css">
-    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/ionicons/css/ionicons.min.css">
-    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/gritter/css/jquery.gritter.css" />
-    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/select2/css/select2.min.css">
-    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/smartwizard/css/smart_wizard.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700&display=swap" />
+    <link rel="stylesheet" href="<?= base_style() ?>/css/default/app.min.css?v=<?= $assets_version ?>">
+    <link rel="stylesheet" href="<?= base_style() ?>/css/datatables.min.css?v=<?= $assets_version ?>" />
+    <link rel="stylesheet" href="<?= base_style() ?>/css/superwisp.css?v=<?= $assets_version ?>">
+    <link rel="stylesheet" href="<?= base_style() ?>/css/jquery-confirm.min.css?v=<?= $assets_version ?>">
+    <link rel="stylesheet" href="<?= base_style() ?>/css/gritter.css?v=<?= $assets_version ?>">
+    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/simple-line-icons/css/simple-line-icons.css?v=<?= $assets_version ?>">
+    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/ionicons/css/ionicons.min.css?v=<?= $assets_version ?>">
+    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/gritter/css/jquery.gritter.css?v=<?= $assets_version ?>" />
+    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/select2/css/select2.min.css?v=<?= $assets_version ?>">
+    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/smartwizard/css/smart_wizard.css?v=<?= $assets_version ?>">
     <link rel="stylesheet"
-        href="<?= base_style() ?>/bookstores/bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css">
-    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/lightbox/css/lightbox.css">
-    <link rel="stylesheet" href="<?= base_style() ?>/css/custom.css">
+        href="<?= base_style() ?>/bookstores/bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css?v=<?= $assets_version ?>">
+    <link rel="stylesheet" href="<?= base_style() ?>/bookstores/lightbox/css/lightbox.css?v=<?= $assets_version ?>">
+    <link rel="stylesheet" href="<?= base_style() ?>/css/custom.css?v=<?= $assets_version ?>">
     <!-- ================== FIN ARCHIVOS CSS ============== -->
     <!-- ================== INICIO TITULO ================= -->
     <title><?= $data['page_name'] ?></title>
@@ -60,6 +65,7 @@
         <!-- ================== INICIO CABEZERA =============== -->
         <?php
         $current = explode("/", $_GET['route']);
+        if (!isset($current[1])) $current[1] = '';
         require_once("navbar.php");
         require_once("sidemenu.php");
         ?>
