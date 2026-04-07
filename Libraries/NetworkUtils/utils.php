@@ -138,3 +138,162 @@ if (!function_exists('str_contains')) {
     }
 }
 
+// =============================================
+// CIDR / IP Validation Helpers (Municipal Module)
+// =============================================
+
+function ipInCidr(string $ip, string $cidr): bool
+{
+    if (strpos($cidr, '/') === false) {
+        return $ip === $cidr;
+    }
+
+    list($subnet, $bits) = explode('/', $cidr);
+    $ip_long = ip2long($ip);
+    $subnet_long = ip2long($subnet);
+
+    if ($ip_long === false || $subnet_long === false) {
+        return false;
+    }
+
+    $mask = -1 << (32 - (int)$bits);
+    $subnet_long &= $mask;
+
+    return ($ip_long & $mask) === $subnet_long;
+}
+
+function cidrOverlap(string $cidr1, string $cidr2): bool
+{
+    list($net1, $bits1) = explode('/', $cidr1);
+    list($net2, $bits2) = explode('/', $cidr2);
+
+    $net1_long = ip2long($net1);
+    $net2_long = ip2long($net2);
+
+    if ($net1_long === false || $net2_long === false) {
+        return false;
+    }
+
+    $min_bits = min((int)$bits1, (int)$bits2);
+    $mask = -1 << (32 - $min_bits);
+
+    return ($net1_long & $mask) === ($net2_long & $mask);
+}
+
+function getUsableIpsFromCidr(string $cidr): array
+{
+    if (strpos($cidr, '/') === false) {
+        return [$cidr];
+    }
+
+    list($subnet, $bits) = explode('/', $cidr);
+    $bits = (int)$bits;
+    $subnet_long = ip2long($subnet);
+
+    if ($subnet_long === false || $bits < 1 || $bits > 32) {
+        return [];
+    }
+
+    $mask = -1 << (32 - $bits);
+    $network = $subnet_long & $mask;
+    $broadcast = $network | ~$mask;
+
+    $ips = [];
+    // Skip network address and broadcast (first and last)
+    for ($i = $network + 1; $i < $broadcast; $i++) {
+        $ips[] = long2ip($i);
+    }
+
+    return $ips;
+}
+
+// =============================================
+// Simple Range Helpers (Municipal Module - Flat Network)
+// =============================================
+
+function ipInRange(string $ip, string $rangeStart, string $rangeEnd): bool
+{
+    $ip_long = ip2long($ip);
+    $start_long = ip2long($rangeStart);
+    $end_long = ip2long($rangeEnd);
+
+    if ($ip_long === false || $start_long === false || $end_long === false) {
+        return false;
+    }
+
+    return $ip_long >= $start_long && $ip_long <= $end_long;
+}
+
+function parseSimpleRange(string $range): ?array
+{
+    $parts = explode('-', $range, 2);
+    if (count($parts) !== 2) {
+        return null;
+    }
+
+    $start = trim($parts[0]);
+    $end = trim($parts[1]);
+
+    if (ip2long($start) === false || ip2long($end) === false) {
+        return null;
+    }
+
+    if (ip2long($start) > ip2long($end)) {
+        return null;
+    }
+
+    return ['start' => $start, 'end' => $end];
+}
+
+function getUsableIpsFromRange(string $rangeStart, string $rangeEnd): array
+{
+    $start_long = ip2long($rangeStart);
+    $end_long = ip2long($rangeEnd);
+
+    if ($start_long === false || $end_long === false || $start_long > $end_long) {
+        return [];
+    }
+
+    $ips = [];
+    for ($i = $start_long; $i <= $end_long; $i++) {
+        $ips[] = long2ip($i);
+    }
+
+    return $ips;
+}
+
+function simpleRangesOverlap(string $range1, string $range2): bool
+{
+    $r1 = parseSimpleRange($range1);
+    $r2 = parseSimpleRange($range2);
+
+    if ($r1 === null || $r2 === null) {
+        return false;
+    }
+
+    $r1Start = ip2long($r1['start']);
+    $r1End = ip2long($r1['end']);
+    $r2Start = ip2long($r2['start']);
+    $r2End = ip2long($r2['end']);
+
+    return $r1Start <= $r2End && $r2Start <= $r1End;
+}
+
+function sanitizeQueueName(string $name): string
+{
+    $name = mb_strtolower($name, 'UTF-8');
+    // Replace accented chars
+    $name = str_replace(
+        ['á','é','í','ó','ú','ñ','ü'],
+        ['a','e','i','o','u','n','u'],
+        $name
+    );
+    // Replace spaces and underscores with hyphens
+    $name = preg_replace('/[\s_]+/', '-', $name);
+    // Remove anything that's not alphanumeric or hyphen
+    $name = preg_replace('/[^a-z0-9\-]/', '', $name);
+    // Collapse multiple hyphens
+    $name = preg_replace('/-+/', '-', $name);
+    return trim($name, '-');
+}
+
