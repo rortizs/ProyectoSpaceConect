@@ -486,5 +486,174 @@ class RouterLegacy
         
         return $res;
     }
+    
+    // =============================================
+    // SIMPLE QUEUE METHODS (Municipal Dashboard)
+    // =============================================
+    
+    /**
+     * List all Simple Queues
+     */
+    public function APIListQueuesSimple()
+    {
+        $res = (object) array();
+        try {
+            if (!$this->connected) {
+                $this->connect();
+            }
+            
+            $response = $this->api->comm('/queue/simple/print');
+            $res->success = true;
+            $res->data = $response;
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        return $res;
+    }
+    
+    /**
+     * Get Simple Queue by target address
+     */
+    public function APIGetQueuesSimple($address)
+    {
+        $res = (object) array();
+        try {
+            if (!$this->connected) {
+                $this->connect();
+            }
+            
+            // Normalize address (add /32 if not present)
+            $target = (strpos($address, '/') === false) ? $address . '/32' : $address;
+            
+            $response = $this->api->comm('/queue/simple/print', array(
+                '?target' => $target
+            ));
+            
+            $res->success = true;
+            $res->data = $response;
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        return $res;
+    }
+    
+    /**
+     * Add Simple Queue
+     */
+    public function APIAddQueuesSimple($name, $address, $maxlimit)
+    {
+        $res = (object) array();
+        
+        try {
+            if (!$this->connected) {
+                $this->connect();
+            }
+            
+            // Check if queue already exists for this address
+            $existing = $this->APIGetQueuesSimple($address);
+            if ($existing->success && count($existing->data) > 0) {
+                $res->success = false;
+                $res->message = "Address already exists";
+                return $res;
+            }
+            
+            // Normalize target address
+            $target = (strpos($address, '/') === false) ? $address . '/32' : $address;
+            
+            $response = $this->api->comm('/queue/simple/add', array(
+                'name' => $name,
+                'target' => $target,
+                'max-limit' => $maxlimit
+            ));
+            
+            $res->success = true;
+            $res->data = $response;
+            $res->message = "Simple Queue created successfully";
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        
+        return $res;
+    }
+    
+    /**
+     * Modify Simple Queue by ID
+     */
+    public function APIModifyQueuesSimple($id, $name, $address, $maxlimit)
+    {
+        $res = (object) array();
+        
+        try {
+            if (!$this->connected) {
+                $this->connect();
+            }
+            
+            // Normalize target address
+            $target = (strpos($address, '/') === false) ? $address . '/32' : $address;
+            
+            $response = $this->api->comm('/queue/simple/set', array(
+                '.id' => $id,
+                'name' => $name,
+                'target' => $target,
+                'max-limit' => $maxlimit
+            ));
+            
+            $res->success = true;
+            $res->data = $response;
+            $res->message = "Simple Queue modified successfully";
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        
+        return $res;
+    }
+    
+    /**
+     * Delete Simple Queue by address
+     */
+    public function APIDeleteQueuesSimple($address)
+    {
+        $res = (object) array();
+        
+        try {
+            if (!$this->connected) {
+                $this->connect();
+            }
+            
+            // Find queue by address
+            $existing = $this->APIGetQueuesSimple($address);
+            
+            if (!$existing->success || count($existing->data) == 0) {
+                $res->success = false;
+                $res->message = "Address does not exist";
+                return $res;
+            }
+            
+            // Get the .id from first match
+            $queue_id = $existing->data[0]['.id'];
+            
+            $response = $this->api->comm('/queue/simple/remove', array(
+                '.id' => $queue_id
+            ));
+            
+            $res->success = true;
+            $res->data = $response;
+            $res->message = "Simple Queue deleted successfully";
+            
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+        
+        return $res;
+    }
 }
 ?>
