@@ -451,12 +451,12 @@ class MuniSyncService extends BaseService
                 return $res;
             }
 
-            // Get all muni users for cross-referencing
+            // Get all muni users for cross-referencing (indexed by IP)
             $allUsers = $this->model->getUsers([]);
-            $usersByQueue = [];
+            $usersByIP = [];
             foreach ($allUsers as $u) {
-                if (!empty($u['queue_name'])) {
-                    $usersByQueue[$u['queue_name']] = $u;
+                if (!empty($u['ip_address'])) {
+                    $usersByIP[$u['ip_address']] = $u;
                 }
             }
 
@@ -471,19 +471,22 @@ class MuniSyncService extends BaseService
                 $bytesParts = $this->parseQueueBytes($bytesStr);
                 $limitParts = explode('/', $maxLimit);
 
-                // Try to match with a muni user by queue name
-                $userName = $name;
-
-                if (isset($usersByQueue[$name])) {
-                    $u = $usersByQueue[$name];
-                    $userName = $u['name'] ?? $name;
-                }
-
                 // Extract IP from target (remove /32)
                 $ip = str_replace('/32', '', $target);
+                
+                // Try to match with a muni user by IP address (more reliable than queue name)
+                $userName = $name; // fallback to queue name if no match
+                $userDepartment = null;
+
+                if (isset($usersByIP[$ip])) {
+                    $u = $usersByIP[$ip];
+                    $userName = $u['name'] ?? $name;
+                    $userDepartment = $u['department_name'] ?? null;
+                }
 
                 $queueData = [
                     'name' => $userName,
+                    'department' => $userDepartment,
                     'queue_name' => $name,
                     'ip' => $ip,
                     'upload_bytes' => $bytesParts['upload'],
