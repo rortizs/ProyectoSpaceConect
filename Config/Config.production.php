@@ -1,8 +1,21 @@
 <?php
+/**
+ * Production Configuration - LXC 101
+ * Copy this file to Config.php on the production server
+ *
+ * Prerequisites:
+ * 1. Create MySQL user:
+ *    CREATE USER 'spaceconect_user'@'localhost' IDENTIFIED BY 'YOUR_SECURE_PASSWORD_HERE';
+ *    GRANT SELECT, INSERT, UPDATE, DELETE ON online.* TO 'spaceconect_user'@'localhost';
+ *    FLUSH PRIVILEGES;
+ *
+ * 2. SSL handled by Caddy on LXC 161 (digilab.digicom.com.gt)
+ */
+
 /* RUTA DEL SISTEMA */
-const BASE_URL = "https://wisppro.net";
+const BASE_URL = "https://digilab.digicom.com.gt";
 /* ZONA HORARIA*/
-date_default_timezone_set('America/Lima');
+date_default_timezone_set('America/Guatemala');
 const MONTHS = [
   "01" => "*ENERO*",
   "02" => "*FEBRERO*",
@@ -19,28 +32,23 @@ const MONTHS = [
 ];
 /* CONSTANTE DE CONEXION */
 const DB_HOST = "localhost";
-const DB_NAME = "u204188373_mikrotikdemo"; //nombre base de datos
-const DB_USER = "u204188373_mikrotikdemo"; //usuario
-const DB_PASSWORD = "@vj^JgeP5"; //contraseña
+const DB_NAME = "online";
+const DB_USER = "spaceconect_user";
+const DB_PASSWORD = "CHANGE_ME_TO_SECURE_PASSWORD";
+const DB_PORT = "3306";
 const DB_CHARSET = "utf8";
 /* BACKUP */
-const TABLES_NAME = "Tables_in_u395713662_mikrotikdemo"; //backups - Tables_in_nombreBD
-// RUTA DE LA CARPETA LIBRARIES
-const LIBRARIES = __DIR__ . '/../Libraries';
+const TABLES_NAME = "Tables_in_online";
 /* DESARROLLADOR*/
-const DEVELOPER = "";
-const DEVELOPER_WEBSITE = "";
-const DEVELOPER_EMAIL = "";
-const DEVELOPER_MOBILE = "";
-/* CONST UTILES*/
-const MEDIOSDEPAGO = "";
-const WHATSAPPLOG = "";
-const FACEBOOKLOG = "";
+const DEVELOPER = "MANUEL ";
+const DEVELOPER_WEBSITE = "digilab.digicom.com.gt";
+const DEVELOPER_EMAIL = "online@gmail.com";
+const DEVELOPER_MOBILE = "+502 5555 5555";
 /* SISTEMA */
 const NAME_SYSTEM = "INTERNET SISTEMA";
 /* CONSTANTES DE ENCRIPTACION */
 const METHOD = "AES-256-CBC";
-const SECRET_KEY = 'SIST-INTERNET';
+const SECRET_KEY = 'SISTWISP';
 const SECRET_IV = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890';
 /* CONSTANTES DE MODULOS */
 const DASHBOARD = 1;
@@ -71,4 +79,3 @@ const SPM = ",";
 const ADMINISTRATOR = 1;
 const TECHNICAL = 2;
 const CHARGES = 3;
-
