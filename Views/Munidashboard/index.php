@@ -163,4 +163,3 @@
 </div>
 
 <?php footer($data); ?>
-<script src="<?= base_style(); ?>/js/functions/<?= $data['page_functions_js']; ?>"></script>
