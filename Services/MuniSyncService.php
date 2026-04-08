@@ -452,7 +452,7 @@ class MuniSyncService extends BaseService
             }
 
             // Get all muni users for cross-referencing (indexed by IP)
-            $allUsers = $this->model->getUsers([]);
+            $allUsers = $this->model->getUsers(['router_id' => $this->routerId]);
             $usersByIP = [];
             foreach ($allUsers as $u) {
                 if (!empty($u['ip_address'])) {
