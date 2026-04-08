@@ -1,5 +1,8 @@
 <?php head($data); ?>
 
+<!-- Municipal Dashboard Custom Styles -->
+<link rel="stylesheet" href="<?= base_url(); ?>/Assets/css/munidashboard.css">
+
 <div id="divLoading">
     <div>
         <img src="<?= base_style(); ?>/images/loading.svg" alt="Loading">
@@ -7,7 +10,7 @@
 </div>
 
 <div id="contentAjax">
-    <main class="app-content">
+    <main class="app-content muni-dashboard">
         <div class="app-title">
             <div>
                 <h1><i class="fas fa-building"></i> <?= $data['page_title']; ?></h1>
@@ -40,42 +43,38 @@
             </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="row" id="statsCards">
-            <div class="col-md-3 col-sm-6 col-6">
-                <div class="widget-small primary coloured-icon">
-                    <i class="icon fa fa-users fa-3x"></i>
-                    <div class="info">
-                        <h4 id="statActiveUsers">0</h4>
-                        <p><b>Empleados Activos</b></p>
-                    </div>
+        <!-- Stats Cards - Redesigned -->
+        <div class="muni-stats-grid" id="statsCards">
+            <div class="muni-stat-card muni-stat-card--ok">
+                <div class="muni-stat-card__label">Empleados Activos</div>
+                <div class="muni-stat-card__value" id="statActiveUsers">0</div>
+                <div class="muni-stat-card__meta">
+                    <i class="fas fa-users"></i>
+                    <span>Con ancho de banda asignado</span>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 col-6">
-                <div class="widget-small coloured-icon" style="border-left: 3px solid #999;">
-                    <i class="icon fa fa-user-slash fa-3x" style="background:#999;"></i>
-                    <div class="info">
-                        <h4 id="statDisabledUsers">0</h4>
-                        <p><b>Inactivos</b></p>
-                    </div>
+            <div class="muni-stat-card muni-stat-card--warning" id="statRiskCard">
+                <div class="muni-stat-card__label">En Zona de Riesgo</div>
+                <div class="muni-stat-card__value" id="statRiskUsers">0</div>
+                <div class="muni-stat-card__meta">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="statRiskMeta">&gt; 70% del límite</span>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 col-6">
-                <div class="widget-small info coloured-icon">
-                    <i class="icon fa fa-download fa-3x"></i>
-                    <div class="info">
-                        <h4 id="statTotalConsumption">--</h4>
-                        <p><b>Consumo Total</b></p>
-                    </div>
+            <div class="muni-stat-card muni-stat-card--info">
+                <div class="muni-stat-card__label">Consumo Total (Bajada)</div>
+                <div class="muni-stat-card__value" id="statTotalConsumption">--</div>
+                <div class="muni-stat-card__meta">
+                    <i class="fas fa-download"></i>
+                    <span>Último minuto</span>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 col-6">
-                <div id="routerStatusCard" class="widget-small coloured-icon" style="border-left: 3px solid #999;">
-                    <i id="routerStatusIcon" class="icon fa fa-server fa-3x" style="background:#999;"></i>
-                    <div class="info">
-                        <h4 id="statRouterStatus">--</h4>
-                        <p><b>Estado Router</b></p>
-                    </div>
+            <div class="muni-stat-card" id="routerStatusCard">
+                <div class="muni-stat-card__label">Estado Router</div>
+                <div class="muni-stat-card__value" id="statRouterStatus">--</div>
+                <div class="muni-stat-card__meta">
+                    <i class="fas fa-server"></i>
+                    <span id="statRouterMeta">Verificando...</span>
                 </div>
             </div>
         </div>
@@ -90,70 +89,87 @@
             </div>
         </div>
 
-        <!-- Top Consumers Table -->
+        <!-- Employee Bandwidth Table - Redesigned -->
         <div class="row">
             <div class="col-md-12">
-                <div class="tile">
-                    <div class="tile-title-w-btn">
-                        <h3 class="title"><i class="fas fa-chart-bar"></i> Consumo por Empleado</h3>
-                        <small class="text-muted" id="bandwidthTimestamp"></small>
-                    </div>
-                    <div class="tile-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-sm" id="topConsumersTable">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Empleado</th>
-                                        <th>IP</th>
-                                        <th>Bajada</th>
-                                        <th>Subida</th>
-                                        <th>Limite</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="topConsumersBody">
-                                    <tr>
-                                        <td colspan="7" class="text-center text-muted">
-                                            <i class="fas fa-spinner fa-spin"></i> Cargando datos del router...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                <div class="muni-table-container">
+                    <div class="muni-table-header">
+                        <h3 class="muni-table-header__title">
+                            <i class="fas fa-chart-bar"></i> Consumo por Empleado
+                        </h3>
+                        <div class="muni-table-header__meta" id="bandwidthTimestamp">
+                            Cargando...
                         </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="muni-table" id="topConsumersTable">
+                            <thead>
+                                <tr>
+                                    <th class="muni-table__rank">#</th>
+                                    <th>Empleado</th>
+                                    <th>IP</th>
+                                    <th>Uso de Ancho de Banda</th>
+                                    <th>Consumo (Bajada / Subida)</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topConsumersBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted" style="padding: 48px;">
+                                        <i class="fas fa-spinner fa-spin muni-loading" style="font-size: 2rem; opacity: 0.3;"></i>
+                                        <div style="margin-top: 16px; color: #718096;">Cargando datos del router...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Quick Block + Recent Activity -->
+        <!-- Quick Block + Actionable Alerts -->
         <div class="row">
             <div class="col-md-5">
-                <div class="tile">
-                    <h3 class="tile-title"><i class="fas fa-ban"></i> Bloqueo Rapido</h3>
-                    <div class="tile-body">
+                <div class="muni-table-container">
+                    <div class="muni-table-header">
+                        <h3 class="muni-table-header__title">
+                            <i class="fas fa-ban"></i> Bloqueo Rápido
+                        </h3>
+                    </div>
+                    <div style="padding: 24px;">
                         <div class="form-group mb-0">
                             <div class="input-group">
-                                <input type="text" id="quickBlockDomain" class="form-control" placeholder="ejemplo.com">
+                                <input type="text" id="quickBlockDomain" class="form-control" placeholder="ejemplo.com" 
+                                       style="font-family: var(--font-mono); font-size: 0.875rem;">
                                 <div class="input-group-append">
                                     <button class="btn btn-danger" onclick="quickBlock()">
                                         <i class="fas fa-ban"></i> Bloquear
                                     </button>
                                 </div>
                             </div>
-                            <small class="form-text text-muted">Bloquea el dominio via DNS en el router</small>
+                            <small class="form-text text-muted" style="margin-top: 8px;">
+                                Bloquea el dominio vía DNS en el router seleccionado
+                            </small>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-7">
-                <div class="tile">
-                    <h3 class="tile-title"><i class="fas fa-bell"></i> Actividad Reciente</h3>
-                    <div class="tile-body" style="max-height: 250px; overflow-y: auto;">
-                        <ul class="list-group" id="recentAlerts">
-                            <li class="list-group-item text-muted text-center">Cargando...</li>
-                        </ul>
+                <div class="muni-alerts">
+                    <div class="muni-alerts__header">
+                        <h3 class="muni-alerts__title">
+                            <i class="fas fa-bell"></i> Alertas y Eventos
+                        </h3>
+                    </div>
+                    <div class="muni-alerts__body" id="recentAlertsContainer">
+                        <div class="muni-empty-state">
+                            <div class="muni-empty-state__icon">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </div>
+                            <div class="muni-empty-state__text">Cargando actividad reciente...</div>
+                        </div>
                     </div>
                 </div>
             </div>
