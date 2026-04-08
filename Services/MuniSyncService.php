@@ -76,8 +76,8 @@ class MuniSyncService extends BaseService
             $existing = $this->router->APIGetQueuesSimple($user['ip_address']);
 
             if (!empty($existing->data) && count($existing->data) > 0) {
-                // Update existing queue
-                $queueId = $existing->data[0]->{'.id'};
+                // Update existing queue (API returns arrays)
+                $queueId = $existing->data[0]['.id'];
                 $result = $this->router->APIModifyQueuesSimple($queueId, $queueName, $target, $maxLimit);
             } else {
                 // Create new queue
@@ -160,7 +160,8 @@ class MuniSyncService extends BaseService
             $existing = $this->router->APIGetQueuesSimple($user['ip_address']);
 
             if (!empty($existing->data) && count($existing->data) > 0) {
-                $queueId = $existing->data[0]->{'.id'};
+                // API returns arrays
+                $queueId = $existing->data[0]['.id'];
 
                 if ($enable) {
                     // Restore full bandwidth
@@ -461,11 +462,12 @@ class MuniSyncService extends BaseService
             }
 
             foreach ($apiResult->data as $queue) {
-                $name = $queue->name ?? '';
-                $target = $queue->target ?? '';
-                $maxLimit = $queue->{'max-limit'} ?? '0/0';
-                $bytesStr = $queue->bytes ?? '0/0';
-                $disabled = isset($queue->disabled) && ($queue->disabled === 'true' || $queue->disabled === true);
+                // RouterOS API returns arrays, not objects
+                $name = $queue['name'] ?? '';
+                $target = $queue['target'] ?? '';
+                $maxLimit = $queue['max-limit'] ?? '0/0';
+                $bytesStr = $queue['bytes'] ?? '0/0';
+                $disabled = isset($queue['disabled']) && ($queue['disabled'] === 'true' || $queue['disabled'] === true);
 
                 // Parse bytes "upload/download" format
                 $bytesParts = $this->parseQueueBytes($bytesStr);
