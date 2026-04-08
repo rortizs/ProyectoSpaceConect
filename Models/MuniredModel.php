@@ -311,6 +311,17 @@ class MuniredModel extends Mysql
         return $result ? 'success' : 'error';
     }
 
+    public function updateUserBandwidth(int $id, string $upload, string $download)
+    {
+        $query = "UPDATE muni_users SET 
+                    custom_upload = ?, 
+                    custom_download = ?, 
+                    queue_sync_status = 'pending' 
+                  WHERE id = $id";
+        $result = $this->update($query, [$upload, $download]);
+        return $result ? 'success' : 'error';
+    }
+
     public function getUsersByDepartment(int $dept_id)
     {
         $sql = "SELECT mu.*,

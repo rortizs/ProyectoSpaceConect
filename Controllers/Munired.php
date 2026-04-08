@@ -424,6 +424,51 @@ class Munired extends Controllers
         die();
     }
 
+    public function updateUserBandwidth()
+    {
+        if ($_POST) {
+            if ($_SESSION['permits_module']['u']) {
+                $id = intval(decrypt($_POST['id']));
+                $upload = trim($_POST['upload']);
+                $download = trim($_POST['download']);
+
+                // Validate format (e.g., "10M", "512K", "1G")
+                if (!preg_match('/^\d+(\.\d+)?[KMG]$/', $upload) || !preg_match('/^\d+(\.\d+)?[KMG]$/', $download)) {
+                    echo json_encode(['status' => 'error', 'msg' => 'Formato inválido. Use formato: 10M, 512K, 1G'], JSON_UNESCAPED_UNICODE);
+                    die();
+                }
+
+                $request = $this->model->updateUserBandwidth($id, $upload, $download);
+
+                if ($request === 'success') {
+                    // Sync queue on router
+                    $user = $this->model->getUser($id);
+                    if (!empty($user)) {
+                        session_write_close(); // Release session lock
+                        $this->initSyncServiceFromDept($user['department_id']);
+                        if ($this->syncService) {
+                            $this->syncService->syncUser($id);
+                        }
+                    }
+
+                    $this->model->logAction(
+                        $_SESSION['idUser'],
+                        'update_bandwidth',
+                        'user',
+                        $id,
+                        "Límite actualizado: {$upload}/{$download}"
+                    );
+
+                    $response = ['status' => 'success', 'msg' => "Límite actualizado a {$upload}/{$download}"];
+                } else {
+                    $response = ['status' => 'error', 'msg' => 'Error al actualizar límite.'];
+                }
+                echo json_encode($response, JSON_UNESCAPED_UNICODE);
+            }
+        }
+        die();
+    }
+
     // =============================================
     // EXPORT ENDPOINTS
     // =============================================

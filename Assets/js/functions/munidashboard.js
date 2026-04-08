@@ -92,6 +92,13 @@
         return div.innerHTML;
     }
     
+    /**
+     * Simple base64 encoding (compatible with PHP decrypt())
+     */
+    function encrypt(str) {
+        return btoa(str);
+    }
+    
     // =============================================
     // DATA LOADING
     // =============================================
@@ -317,15 +324,18 @@
      * Render action buttons
      */
     function renderActions(queue) {
+        const userId = queue.user_id || null;
+        const userIdEncrypted = userId ? encrypt(userId.toString()) : null;
+        
         return `
             <div class="muni-actions">
                 <button class="muni-action-btn muni-action-btn--primary" 
                         onclick="viewDetails('${escapeHtml(queue.ip)}')">
                     <i class="fas fa-chart-line"></i> Ver
                 </button>
-                ${queue.riskLevel === 'critical' ? `
+                ${queue.riskLevel === 'critical' && userIdEncrypted ? `
                     <button class="muni-action-btn muni-action-btn--danger" 
-                            onclick="handleCriticalUser('${escapeHtml(queue.ip)}', '${escapeHtml(queue.name)}')">
+                            onclick="handleCriticalUser('${userIdEncrypted}', '${escapeHtml(queue.ip)}', '${escapeHtml(queue.name)}', '${escapeHtml(queue.max_limit)}')">
                         <i class="fas fa-exclamation-triangle"></i> Acción
                     </button>
                 ` : ''}
@@ -421,27 +431,181 @@
         });
     };
     
-    window.handleCriticalUser = function(ip, name) {
+    window.handleCriticalUser = function(userId, ip, name, currentLimit) {
         Swal.fire({
             title: '⚠️ Usuario en estado crítico',
             html: `
                 <p><strong>${name}</strong> (${ip}) ha excedido el 90% de su límite de ancho de banda.</p>
-                <p>¿Qué acción desea tomar?</p>
+                <p>Límite actual: <code style="font-family: var(--font-mono); background: #f7fafc; padding: 4px 8px; border-radius: 4px;">${formatLimit(currentLimit)}</code></p>
+                <p style="margin-top: 16px;">¿Qué acción desea tomar?</p>
             `,
             icon: 'warning',
             showDenyButton: true,
             showCancelButton: true,
             confirmButtonText: '<i class="fas fa-chart-line"></i> Ampliar límite',
             denyButtonText: '<i class="fas fa-ban"></i> Bloquear usuario',
-            cancelButtonText: 'Cancelar'
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'btn btn-primary',
+                denyButton: 'btn btn-danger',
+                cancelButton: 'btn btn-secondary'
+            }
         }).then((result) => {
             if (result.isConfirmed) {
-                Swal.fire('Funcionalidad en desarrollo', 'Se abrirá diálogo para ampliar límite de ancho de banda.', 'info');
+                // Ampliar límite
+                expandBandwidthLimit(userId, name, currentLimit);
             } else if (result.isDenied) {
-                Swal.fire('Funcionalidad en desarrollo', 'Se bloqueará el usuario temporalmente.', 'info');
+                // Bloquear usuario
+                blockUser(userId, name, ip);
             }
         });
     };
+    
+    /**
+     * Expand bandwidth limit for a user
+     */
+    function expandBandwidthLimit(userId, userName, currentLimit) {
+        const limits = formatLimit(currentLimit).split(' / ');
+        const currentUpload = limits[0] || '10M';
+        const currentDownload = limits[1] || '10M';
+        
+        Swal.fire({
+            title: 'Ampliar límite de ancho de banda',
+            html: `
+                <p style="margin-bottom: 16px;">Usuario: <strong>${userName}</strong></p>
+                <div style="text-align: left; max-width: 400px; margin: 0 auto;">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.875rem;">
+                            Subida (Upload)
+                        </label>
+                        <input id="swal-upload" class="swal2-input" 
+                               value="${currentUpload}" 
+                               placeholder="Ej: 20M, 1G, 512K"
+                               style="font-family: var(--font-mono); width: 100%; margin: 0;">
+                        <small style="color: #718096; font-size: 0.75rem;">Formato: 10M, 512K, 1G</small>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.875rem;">
+                            Bajada (Download)
+                        </label>
+                        <input id="swal-download" class="swal2-input" 
+                               value="${currentDownload}" 
+                               placeholder="Ej: 50M, 2G, 1024K"
+                               style="font-family: var(--font-mono); width: 100%; margin: 0;">
+                        <small style="color: #718096; font-size: 0.75rem;">Formato: 10M, 512K, 1G</small>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-check"></i> Aplicar nuevo límite',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'btn btn-success',
+                cancelButton: 'btn btn-secondary'
+            },
+            preConfirm: () => {
+                const upload = document.getElementById('swal-upload').value.trim().toUpperCase();
+                const download = document.getElementById('swal-download').value.trim().toUpperCase();
+                
+                // Validate format
+                const formatRegex = /^\d+(\.\d+)?[KMG]$/;
+                if (!formatRegex.test(upload) || !formatRegex.test(download)) {
+                    Swal.showValidationMessage('Formato inválido. Use: 10M, 512K, 1G');
+                    return false;
+                }
+                
+                return { upload, download };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const { upload, download } = result.value;
+                
+                Swal.fire({
+                    title: 'Aplicando cambios...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+                
+                $.post(base_url + '/munired/updateUserBandwidth', {
+                    id: userId,
+                    upload: upload,
+                    download: download
+                }, function (response) {
+                    let res = JSON.parse(response);
+                    if (res.status === 'success') {
+                        Swal.fire({
+                            title: '¡Límite actualizado!',
+                            html: `Nuevo límite: <strong>${upload} / ${download}</strong>`,
+                            icon: 'success',
+                            timer: 3000
+                        });
+                        // Reload stats
+                        setTimeout(() => loadBandwidthStats(), 1000);
+                    } else {
+                        Swal.fire('Error', res.msg, 'error');
+                    }
+                }).fail(function() {
+                    Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                });
+            }
+        });
+    }
+    
+    /**
+     * Block user (disable bandwidth)
+     */
+    function blockUser(userId, userName, userIp) {
+        Swal.fire({
+            title: '⛔ Bloquear usuario',
+            html: `
+                <p>¿Está seguro que desea <strong>bloquear</strong> a:</p>
+                <p style="margin-top: 12px;"><strong>${userName}</strong> (${userIp})?</p>
+                <p style="margin-top: 12px; color: #ef4444; font-size: 0.875rem;">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    El usuario perderá acceso a internet inmediatamente.
+                </p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-ban"></i> Sí, bloquear',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#ef4444',
+            customClass: {
+                confirmButton: 'btn btn-danger',
+                cancelButton: 'btn btn-secondary'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Bloqueando usuario...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+                
+                $.post(base_url + '/munired/toggleUser', {
+                    id: userId,
+                    status: 0  // 0 = disabled
+                }, function (response) {
+                    let res = JSON.parse(response);
+                    if (res.status === 'success') {
+                        Swal.fire({
+                            title: 'Usuario bloqueado',
+                            text: `${userName} ha sido bloqueado exitosamente.`,
+                            icon: 'success',
+                            timer: 3000
+                        });
+                        // Reload stats
+                        setTimeout(() => loadBandwidthStats(), 1000);
+                    } else {
+                        Swal.fire('Error', res.msg, 'error');
+                    }
+                }).fail(function() {
+                    Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                });
+            }
+        });
+    }
     
     window.quickBlock = function() {
         let domain = $('#quickBlockDomain').val().trim();

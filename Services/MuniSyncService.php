@@ -479,14 +479,17 @@ class MuniSyncService extends BaseService
                 // Try to match with a muni user by IP address (more reliable than queue name)
                 $userName = $name; // fallback to queue name if no match
                 $userDepartment = null;
+                $userId = null;
 
                 if (isset($usersByIP[$ip])) {
                     $u = $usersByIP[$ip];
                     $userName = $u['name'] ?? $name;
                     $userDepartment = $u['department_name'] ?? null;
+                    $userId = $u['id'] ?? null;
                 }
 
                 $queueData = [
+                    'user_id' => $userId,
                     'name' => $userName,
                     'department' => $userDepartment,
                     'queue_name' => $name,
