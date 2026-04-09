@@ -422,14 +422,30 @@ function loadBandwidthTable() {
 $('#bwRouter').on('change', function () { loadBandwidthTable(); });
 
 function syncDeptQueues(encDeptId) {
-    Swal.fire({ title: 'Sincronizando colas...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    // Level 3 — sync loader for department queues
+    const loader = MuniLoader.sync(
+        'Sincronizando colas del departamento',
+        MuniLoader.STEPS.syncDept
+    );
+
+    const stepTimers = [
+        setTimeout(() => loader.next(), 700),   // → Leyendo usuarios
+        setTimeout(() => loader.next(), 2000),  // → Sincronizando colas
+        setTimeout(() => loader.next(), 4500),  // → Actualizando registros
+    ];
 
     $.post(base_url + '/munired/syncDepartmentQueues', { dept_id: encDeptId }, function (response) {
+        stepTimers.forEach(t => clearTimeout(t));
         let res = JSON.parse(response);
-        Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
+        if (res.status === 'success') {
+            loader.done('Colas sincronizadas', res.msg);
+        } else {
+            loader.done('Completado con advertencias', res.msg);
+        }
         loadBandwidthTable();
     }).fail(function () {
-        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+        stepTimers.forEach(t => clearTimeout(t));
+        loader.fail('No se pudo conectar con el servidor.');
     });
 }
 
@@ -471,14 +487,32 @@ function syncAllQueues() {
     let routerId = $('#bwRouter').val();
     if (!routerId) { Swal.fire('Error', 'Seleccione un router.', 'warning'); return; }
 
-    Swal.fire({ title: 'Sincronizando todas las colas...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    // Level 3 — full sync animated loader
+    const loader = MuniLoader.sync(
+        'Sincronizando todas las colas',
+        MuniLoader.STEPS.syncAll
+    );
+
+    const stepTimers = [
+        setTimeout(() => loader.next(), 800),
+        setTimeout(() => loader.next(), 2000),
+        setTimeout(() => loader.next(), 3500),
+        setTimeout(() => loader.next(), 5500),
+        setTimeout(() => loader.next(), 7500),
+    ];
 
     $.post(base_url + '/munired/syncAll', { router_id: routerId }, function (response) {
+        stepTimers.forEach(t => clearTimeout(t));
         let res = JSON.parse(response);
-        Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
+        if (res.status === 'success') {
+            loader.done('Sincronización completada', res.msg);
+        } else {
+            loader.done('Completado con advertencias', res.msg);
+        }
         loadBandwidthTable();
     }).fail(function () {
-        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+        stepTimers.forEach(t => clearTimeout(t));
+        loader.fail('No se pudo conectar con el servidor.');
     });
 }
 
@@ -639,13 +673,30 @@ function syncFilteringRules() {
     let routerId = $('#filteringRouter').val();
     if (!routerId) { Swal.fire('Error', 'Seleccione un router.', 'warning'); return; }
 
-    Swal.fire({ title: 'Sincronizando filtrado...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    // Level 2 — processing loader for filtering sync
+    const loader = MuniLoader.processing(
+        'Sincronizando reglas de filtrado',
+        MuniLoader.STEPS.syncFiltering
+    );
+
+    const stepTimers = [
+        setTimeout(() => loader.next(), 600),   // → Leyendo reglas
+        setTimeout(() => loader.next(), 1800),  // → Aplicando políticas
+        setTimeout(() => loader.next(), 3500),  // → Actualizando DNS
+        setTimeout(() => loader.next(), 5000),  // → Guardando config
+    ];
 
     $.post(base_url + '/munired/syncFiltering', { router_id: routerId }, function (response) {
+        stepTimers.forEach(t => clearTimeout(t));
         let res = JSON.parse(response);
-        Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
+        if (res.status === 'success') {
+            loader.done('Filtrado sincronizado', res.msg);
+        } else {
+            loader.done('Completado con advertencias', res.msg);
+        }
     }).fail(function () {
-        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+        stepTimers.forEach(t => clearTimeout(t));
+        loader.fail('No se pudo conectar con el servidor.');
     });
 }
 
@@ -681,13 +732,19 @@ function loadConfigRouters() {
 }
 
 function testRouterConnection(routerId) {
-    Swal.fire({ title: 'Probando conexion...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    // Level 2 — processing loader (quick ~1-2s)
+    const loader = MuniLoader.processing(
+        'Probando conexión al router',
+        MuniLoader.STEPS.testConnection
+    );
+
+    setTimeout(() => loader.next(), 600); // → Leyendo info del sistema
 
     $.post(base_url + '/munidashboard/getRouterStatus', { router_id: routerId }, function (response) {
         let res = JSON.parse(response);
         if (res.connected) {
             let d = res.data;
-            Swal.fire('Conectado', `Version: ${d.version}\nBoard: ${d.board_name}\nCPU: ${d.cpu_load}%\nUptime: ${d.uptime}`, 'success');
+            loader.done('Router conectado', `Versión: ${d.version} | CPU: ${d.cpu_load}% | Uptime: ${d.uptime}`);
 
             // Update dynamic info panel if on config page
             let infoHtml = `
@@ -701,10 +758,10 @@ function testRouterConnection(routerId) {
             `;
             $('#routerStatusInfo').html(infoHtml);
         } else {
-            Swal.fire('Error', res.msg || 'No se pudo conectar. Verifique que la API REST este habilitada en el router.', 'error');
+            loader.fail(res.msg || 'No se pudo conectar. Verifique que la API REST esté habilitada en el router.');
         }
     }).fail(function () {
-        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+        loader.fail('No se pudo conectar con el servidor.');
     });
 }
 
@@ -712,13 +769,31 @@ function syncAllFromConfig() {
     let routerId = $('#configRouter').val();
     if (!routerId) { Swal.fire('Error', 'Seleccione un router.', 'warning'); return; }
 
-    Swal.fire({ title: 'Sincronizando todo...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    // Level 3 — full sync animated loader (same heavy operation as syncAll)
+    const loader = MuniLoader.sync(
+        'Sincronizando todo desde Configuración',
+        MuniLoader.STEPS.syncAll
+    );
+
+    const stepTimers = [
+        setTimeout(() => loader.next(), 800),
+        setTimeout(() => loader.next(), 2000),
+        setTimeout(() => loader.next(), 3500),
+        setTimeout(() => loader.next(), 5500),
+        setTimeout(() => loader.next(), 7500),
+    ];
 
     $.post(base_url + '/munired/syncAll', { router_id: routerId }, function (response) {
+        stepTimers.forEach(t => clearTimeout(t));
         let res = JSON.parse(response);
-        Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
+        if (res.status === 'success') {
+            loader.done('Sincronización completada', res.msg);
+        } else {
+            loader.done('Completado con advertencias', res.msg);
+        }
     }).fail(function () {
-        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+        stepTimers.forEach(t => clearTimeout(t));
+        loader.fail('No se pudo conectar con el servidor.');
     });
 }
 
@@ -753,13 +828,30 @@ function syncFilteringFromConfig() {
     let routerId = $('#configRouter').val();
     if (!routerId) { Swal.fire('Error', 'Seleccione un router.', 'warning'); return; }
 
-    Swal.fire({ title: 'Sincronizando filtrado...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    // Level 2 — processing loader for filtering sync from Config section
+    const loader = MuniLoader.processing(
+        'Sincronizando reglas de filtrado',
+        MuniLoader.STEPS.syncFiltering
+    );
+
+    const stepTimers = [
+        setTimeout(() => loader.next(), 600),
+        setTimeout(() => loader.next(), 1800),
+        setTimeout(() => loader.next(), 3500),
+        setTimeout(() => loader.next(), 5000),
+    ];
 
     $.post(base_url + '/munired/syncFiltering', { router_id: routerId }, function (response) {
+        stepTimers.forEach(t => clearTimeout(t));
         let res = JSON.parse(response);
-        Swal.fire(res.status === 'success' ? 'Completado' : 'Atencion', res.msg, res.status === 'success' ? 'success' : 'warning');
+        if (res.status === 'success') {
+            loader.done('Filtrado sincronizado', res.msg);
+        } else {
+            loader.done('Completado con advertencias', res.msg);
+        }
     }).fail(function () {
-        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+        stepTimers.forEach(t => clearTimeout(t));
+        loader.fail('No se pudo conectar con el servidor.');
     });
 }
 

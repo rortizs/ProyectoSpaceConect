@@ -82,6 +82,12 @@ if (strpos($page_route, 'list') !== false || strpos($page_route, 'routers') !== 
 <!-- ================== FIN ARCHIVOS JS =========== -->
 <?php if (isset($data['page_functions_js'])) { ?>
   <!-- ================== INICIO FUNCION JS ============ -->
+  <?php
+  // Load MuniProgressLoader before muni JS files (dependency)
+  $muniPages = ['munidashboard.js', 'munired.js'];
+  if (in_array($data['page_functions_js'], $muniPages)) { ?>
+    <script src="<?= base_style() ?>/js/functions/muni-progress-loader.js?v=<?= $assets_version ?>"></script>
+  <?php } ?>
   <script src="<?= base_style() ?>/js/functions/<?= $data['page_functions_js']; ?>?v=<?= $assets_version ?>"></script>
   <!-- ================== FIN FUNCION JS =============== -->
 <?php } ?>

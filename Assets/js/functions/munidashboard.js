@@ -424,16 +424,12 @@
     // =============================================
     
     window.viewDetails = function(ip, name, department, userId) {
-        // Show loading while fetching data
-        Swal.fire({
-            title: 'Cargando detalles...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+        // Level 1 — instant loader (this call is fast ~0.5s)
+        const loader = MuniLoader.instant('Cargando detalles de ' + name + '...');
         
         // Fetch user details from backend
         $.post(base_url + '/munired/getUserDetails', { ip: ip }, function(response) {
-            Swal.close();
+            loader.close();
             let data = JSON.parse(response);
             
             if (data.status === 'success') {
@@ -443,7 +439,7 @@
                 showBasicUserModal(ip, name, department);
             }
         }).fail(function() {
-            Swal.close();
+            loader.close();
             showBasicUserModal(ip, name, department);
         });
     };
@@ -664,11 +660,11 @@
             if (result.isConfirmed) {
                 const { upload, download } = result.value;
                 
-                Swal.fire({
-                    title: 'Aplicando cambios...',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading()
-                });
+                // Level 2 — processing loader with real steps
+                const loader = MuniLoader.processing(
+                    'Actualizando límite de ' + userName,
+                    MuniLoader.STEPS.expandBandwidth
+                );
                 
                 $.post(base_url + '/munired/updateUserBandwidth', {
                     id: userId,
@@ -677,20 +673,22 @@
                 }, function (response) {
                     let res = JSON.parse(response);
                     if (res.status === 'success') {
-                        Swal.fire({
-                            title: '¡Límite actualizado!',
-                            html: `Nuevo límite: <strong>${upload} / ${download}</strong>`,
-                            icon: 'success',
-                            timer: 3000
-                        });
+                        loader.done(
+                            '¡Límite actualizado!',
+                            'Nuevo límite: <strong>' + upload + ' / ' + download + '</strong>'
+                        );
                         // Reload stats
                         setTimeout(() => loadBandwidthStats(), 1000);
                     } else {
-                        Swal.fire('Error', res.msg, 'error');
+                        loader.fail(res.msg);
                     }
                 }).fail(function() {
-                    Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                    loader.fail('No se pudo conectar con el servidor');
                 });
+                
+                // Advance steps to simulate real progress while waiting
+                setTimeout(() => loader.next(), 300);   // Validando → Conectando
+                setTimeout(() => loader.next(), 900);   // Conectando → Actualizando Queue
             }
         });
     }
@@ -720,11 +718,11 @@
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                Swal.fire({
-                    title: 'Bloqueando usuario...',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading()
-                });
+                // Level 2 — processing loader with real steps
+                const loader = MuniLoader.processing(
+                    'Bloqueando a ' + userName,
+                    MuniLoader.STEPS.blockUser
+                );
                 
                 $.post(base_url + '/munired/toggleUser', {
                     id: userId,
@@ -732,20 +730,22 @@
                 }, function (response) {
                     let res = JSON.parse(response);
                     if (res.status === 'success') {
-                        Swal.fire({
-                            title: 'Usuario bloqueado',
-                            text: `${userName} ha sido bloqueado exitosamente.`,
-                            icon: 'success',
-                            timer: 3000
-                        });
+                        loader.done(
+                            'Usuario bloqueado',
+                            userName + ' ha sido bloqueado exitosamente.'
+                        );
                         // Reload stats
                         setTimeout(() => loadBandwidthStats(), 1000);
                     } else {
-                        Swal.fire('Error', res.msg, 'error');
+                        loader.fail(res.msg);
                     }
                 }).fail(function() {
-                    Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                    loader.fail('No se pudo conectar con el servidor');
                 });
+                
+                // Advance steps to simulate real progress while waiting
+                setTimeout(() => loader.next(), 300);   // Verificando → Conectando
+                setTimeout(() => loader.next(), 800);   // Conectando → Aplicando throttle
             }
         });
     }
@@ -802,21 +802,36 @@
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                Swal.fire({ 
-                    title: 'Sincronizando...', 
-                    allowOutsideClick: false, 
-                    didOpen: () => Swal.showLoading() 
-                });
+                // Level 3 — full sync animated loader
+                const loader = MuniLoader.sync(
+                    'Sincronizando con el router MikroTik',
+                    MuniLoader.STEPS.syncAll
+                );
+    
+                // Advance steps at estimated intervals based on real operation timing
+                const stepTimers = [
+                    setTimeout(() => loader.next(), 800),    // → Leyendo colas
+                    setTimeout(() => loader.next(), 2000),   // → Comparando BD
+                    setTimeout(() => loader.next(), 3500),   // → Creando nuevas
+                    setTimeout(() => loader.next(), 5500),   // → Actualizando existentes
+                    setTimeout(() => loader.next(), 7500),   // → Eliminando huérfanas
+                ];
     
                 $.post(base_url + '/munired/syncAll', { router_id: selectedRouterId }, function (response) {
+                    // Clear pending timers — real response arrived
+                    stepTimers.forEach(t => clearTimeout(t));
+                    
                     let res = JSON.parse(response);
-                    Swal.fire(
-                        res.status === 'success' ? 'Completado' : 'Atención', 
-                        res.msg, 
-                        res.status === 'success' ? 'success' : 'warning'
-                    );
+                    if (res.status === 'success') {
+                        loader.done('Sincronización completada', res.msg);
+                    } else {
+                        loader.done('Sincronización con advertencias', res.msg);
+                    }
                     loadBandwidthStats();
                     loadAlerts();
+                }).fail(function() {
+                    stepTimers.forEach(t => clearTimeout(t));
+                    loader.fail('No se pudo conectar con el servidor');
                 });
             }
         });

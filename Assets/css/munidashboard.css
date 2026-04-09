@@ -4,6 +4,272 @@
  */
 
 /* ===========================
+   MUNI PROGRESS LOADER
+   =========================== */
+
+/* Shared popup override */
+.muni-loader__popup {
+    border-radius: 16px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+.muni-loader__popup--sync {
+    border-top: 4px solid var(--infra-primary, #3b82f6) !important;
+}
+
+/* ── Level 2: Processing bar ── */
+.muni-loader__container {
+    padding: 28px 32px 24px;
+    text-align: center;
+}
+
+.muni-loader__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0a0f1a;
+    margin-bottom: 20px;
+    font-family: var(--font-ui, 'Inter', sans-serif);
+}
+
+.muni-loader__progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.muni-loader__progress-bar {
+    flex: 1;
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.muni-loader__progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #6366f1);
+    border-radius: 999px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.muni-loader__percent {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #3b82f6;
+    min-width: 42px;
+    text-align: right;
+}
+
+.muni-loader__current-step {
+    font-size: 0.875rem;
+    color: #4a5568;
+    margin-bottom: 16px;
+    min-height: 20px;
+    transition: opacity 0.3s ease;
+}
+
+.muni-loader__steps-list {
+    text-align: left;
+    background: #f7fafc;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.muni-loader__step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: #a0aec0;
+    transition: color 0.3s ease;
+}
+
+.muni-loader__step--active {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.muni-loader__step--done {
+    color: #10b981;
+}
+
+.muni-loader__step-icon {
+    font-size: 0.75rem;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.muni-loader__step-icon--done   { color: #10b981; }
+.muni-loader__step-icon--active { color: #3b82f6; animation: muniPulse 1s infinite; }
+.muni-loader__step-icon--pending{ color: #cbd5e0; }
+
+/* ── Level 3: Sync full animated ── */
+.muni-loader__sync-container {
+    padding: 32px 32px 24px;
+    text-align: center;
+}
+
+.muni-loader__sync-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.muni-loader__sync-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: muniSpin 0.8s linear infinite;
+}
+
+.muni-loader__sync-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0a0f1a;
+    margin-bottom: 20px;
+    font-family: var(--font-ui, 'Inter', sans-serif);
+}
+
+.muni-loader__sync-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.muni-loader__sync-bar {
+    flex: 1;
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+
+.muni-loader__sync-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden;
+    /* width is driven by JS requestAnimationFrame — no CSS transition here */
+}
+
+.muni-loader__sync-shine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    animation: muniShine 1.6s ease-in-out infinite;
+}
+
+.muni-loader__sync-percent {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #3b82f6;
+    min-width: 46px;
+    text-align: right;
+}
+
+.muni-loader__sync-step {
+    font-size: 0.875rem;
+    color: #4a5568;
+    margin: 10px 0 20px;
+    font-style: italic;
+    min-height: 20px;
+    transition: opacity 0.4s ease;
+}
+
+.muni-loader__sync-steps {
+    text-align: left;
+    background: #f7fafc;
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.muni-loader__sync-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8125rem;
+    color: #a0aec0;
+    transition: color 0.3s ease, font-weight 0.3s ease;
+}
+
+.muni-loader__sync-item--active {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.muni-loader__sync-item--done {
+    color: #10b981;
+}
+
+.muni-loader__sync-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    flex-shrink: 0;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.muni-loader__sync-dot--active {
+    background: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    animation: muniPulse 1s infinite;
+}
+
+.muni-loader__sync-dot--done {
+    background: #10b981;
+}
+
+.muni-loader__sync-label {
+    line-height: 1.3;
+}
+
+.muni-loader__sync-note {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    font-style: italic;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* ── Animations ── */
+@keyframes muniSpin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes muniShine {
+    0%   { left: -100%; }
+    50%  { left: 100%; }
+    100% { left: 100%; }
+}
+
+@keyframes muniPulse {
+    0%, 100% { transform: scale(1);    opacity: 1;   }
+    50%       { transform: scale(1.15); opacity: 0.7; }
+}
+
+/* ===========================
    DESIGN TOKENS
    =========================== */
 
