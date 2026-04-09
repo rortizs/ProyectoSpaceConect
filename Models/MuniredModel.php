@@ -322,6 +322,20 @@ class MuniredModel extends Mysql
         return $result ? 'success' : 'error';
     }
 
+    public function getUserByIP(string $ip)
+    {
+        $sql = "SELECT mu.*,
+                    md.name AS department_name,
+                    md.default_upload,
+                    md.default_download
+                FROM muni_users mu
+                LEFT JOIN muni_departments md ON mu.department_id = md.id
+                WHERE mu.ip_address = '$ip'
+                LIMIT 1";
+        
+        return $this->select($sql);
+    }
+
     public function getUsersByDepartment(int $dept_id)
     {
         $sql = "SELECT mu.*,

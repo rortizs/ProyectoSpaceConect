@@ -577,4 +577,51 @@ class MuniSyncService extends BaseService
 
         return $res;
     }
+
+    /**
+     * Get user stats from router by user ID
+     */
+    public function getUserStats(int $userId): object
+    {
+        $res = (object) ['success' => false, 'data' => null];
+
+        // Get user IP from database
+        $user = $this->model->getUser($userId);
+        if (empty($user) || empty($user['ip_address'])) {
+            $res->message = 'Usuario no encontrado';
+            return $res;
+        }
+
+        if (!$this->connectRouter()) {
+            $res->message = 'No se pudo conectar al router';
+            return $res;
+        }
+
+        try {
+            // Get queue stats for this IP
+            $queueResult = $this->router->APIGetQueuesSimple($user['ip_address']);
+
+            if ($queueResult->success && !empty($queueResult->data)) {
+                $queue = $queueResult->data[0];
+                $bytesStr = $queue['bytes'] ?? '0/0';
+                $bytesParts = $this->parseQueueBytes($bytesStr);
+
+                $res->success = true;
+                $res->data = [
+                    'ip' => $user['ip_address'],
+                    'name' => $queue['name'] ?? $user['queue_name'],
+                    'bytes' => $bytesStr,
+                    'upload_bytes' => $bytesParts['upload'],
+                    'download_bytes' => $bytesParts['download'],
+                    'max_limit' => $queue['max-limit'] ?? '0/0',
+                ];
+            } else {
+                $res->message = 'Queue no encontrada en router';
+            }
+        } catch (Exception $e) {
+            $res->message = 'Excepcion: ' . $e->getMessage();
+        }
+
+        return $res;
+    }
 }

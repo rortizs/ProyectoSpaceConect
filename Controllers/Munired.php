@@ -269,6 +269,80 @@ class Munired extends Controllers
         die();
     }
 
+    public function getUserDetails()
+    {
+        if ($_POST && $_SESSION['permits_module']['v']) {
+            $ip = trim($_POST['ip'] ?? '');
+            
+            if (empty($ip)) {
+                echo json_encode(['status' => 'error', 'msg' => 'IP requerida'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+            
+            // Find user by IP
+            $user = $this->model->getUserByIP($ip);
+            
+            if (empty($user)) {
+                echo json_encode(['status' => 'error', 'msg' => 'Usuario no encontrado'], JSON_UNESCAPED_UNICODE);
+                die();
+            }
+            
+            // Get current consumption from router (if connected)
+            $consumption = ['download' => 0, 'upload' => 0];
+            $this->initSyncServiceFromDept($user['department_id']);
+            if ($this->syncService) {
+                $stats = $this->syncService->getUserStats($user['id']);
+                if ($stats && $stats->success) {
+                    $consumption = [
+                        'download' => $stats->data['download_bytes'] ?? 0,
+                        'upload' => $stats->data['upload_bytes'] ?? 0
+                    ];
+                }
+            }
+            
+            // Build response
+            $data = [
+                'user' => $user,
+                'limits' => [
+                    'upload' => $user['custom_upload'] ?? $user['default_upload'] ?? '5M',
+                    'download' => $user['custom_download'] ?? $user['default_download'] ?? '10M'
+                ],
+                'consumption' => $consumption,
+                'history' => $this->generateMockHistory() // TODO: Replace with real history from DB
+            ];
+            
+            echo json_encode(['status' => 'success', 'data' => $data], JSON_UNESCAPED_UNICODE);
+        }
+        die();
+    }
+    
+    /**
+     * Generate mock history for user details (TODO: Replace with real DB data)
+     */
+    private function generateMockHistory(): array
+    {
+        $history = [];
+        $today = new DateTime();
+        
+        for ($i = 6; $i >= 0; $i--) {
+            $date = clone $today;
+            $date->modify("-{$i} days");
+            
+            // Random consumption data
+            $download = rand(100000000, 2000000000); // 100MB - 2GB
+            $upload = rand(10000000, 500000000); // 10MB - 500MB
+            
+            $history[] = [
+                'date' => $date->format('Y-m-d'),
+                'download' => $download,
+                'upload' => $upload,
+                'peak_time' => sprintf('%02d:%02d', rand(8, 17), rand(0, 59))
+            ];
+        }
+        
+        return $history;
+    }
+
     public function saveUser()
     {
         if ($_POST) {
