@@ -330,7 +330,7 @@
         return `
             <div class="muni-actions">
                 <button class="muni-action-btn muni-action-btn--primary" 
-                        onclick="viewDetails('${escapeHtml(queue.ip)}')">
+                        onclick="viewDetails('${escapeHtml(queue.ip)}', '${escapeHtml(queue.name)}', '${escapeHtml(queue.department)}', '${userIdEncrypted || ''}')">
                     <i class="fas fa-chart-line"></i> Ver
                 </button>
                 ${queue.riskLevel === 'critical' && userIdEncrypted ? `
@@ -423,13 +423,156 @@
     // ACTIONS
     // =============================================
     
-    window.viewDetails = function(ip) {
+    window.viewDetails = function(ip, name, department, userId) {
+        // Show loading while fetching data
         Swal.fire({
-            title: 'Detalles de ' + ip,
-            text: 'Funcionalidad en desarrollo - se mostrará histórico de consumo y estadísticas detalladas.',
-            icon: 'info'
+            title: 'Cargando detalles...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+        
+        // Fetch user details from backend
+        $.post(base_url + '/munired/getUserDetails', { ip: ip }, function(response) {
+            Swal.close();
+            let data = JSON.parse(response);
+            
+            if (data.status === 'success') {
+                showUserDetailsModal(data.data, ip, name, department);
+            } else {
+                // Fallback: show basic info if backend not ready
+                showBasicUserModal(ip, name, department);
+            }
+        }).fail(function() {
+            Swal.close();
+            showBasicUserModal(ip, name, department);
         });
     };
+    
+    /**
+     * Show detailed user modal with stats
+     */
+    function showUserDetailsModal(userData, ip, name, department) {
+        const consumption = userData.consumption || { download: 0, upload: 0 };
+        const limits = userData.limits || { upload: '5M', download: '10M' };
+        const history = userData.history || [];
+        
+        // Calculate usage percentage
+        const downloadLimit = parseMikroTikRate(limits.download);
+        const usagePercent = downloadLimit > 0 ? Math.round((consumption.download / downloadLimit) * 100) : 0;
+        
+        // Build history rows
+        let historyHtml = '';
+        if (history.length > 0) {
+            historyHtml = history.slice(0, 7).map(day => `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem;">${day.date}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; font-family: var(--font-mono);">${formatBytes(day.download)}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; font-family: var(--font-mono);">${formatBytes(day.upload)}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem;">${day.peak_time || '--'}</td>
+                </tr>
+            `).join('');
+        } else {
+            historyHtml = '<tr><td colspan="4" style="padding: 16px; text-align: center; color: #718096;">Sin historial disponible</td></tr>';
+        }
+        
+        Swal.fire({
+            title: '',
+            html: `
+                <div style="text-align: left; max-width: 600px;">
+                    <!-- Header -->
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e2e8f0;">
+                        <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #3b82f6, #6366f1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #0a0f1a;">${name}</h3>
+                            <p style="margin: 4px 0 0 0; color: #718096; font-size: 0.875rem;">${department || 'Sin departamento'} • <code style="background: #f7fafc; padding: 2px 6px; border-radius: 4px;">${ip}</code></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+                        <div style="background: #f7fafc; padding: 16px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); color: #3b82f6;">${formatBytes(consumption.download)}</div>
+                            <div style="font-size: 0.75rem; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px;">Descargado</div>
+                        </div>
+                        <div style="background: #f7fafc; padding: 16px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); color: #6366f1;">${formatBytes(consumption.upload)}</div>
+                            <div style="font-size: 0.75rem; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px;">Subido</div>
+                        </div>
+                        <div style="background: ${usagePercent > 90 ? '#fee2e2' : (usagePercent > 70 ? '#fef3c7' : '#d1fae5')}; padding: 16px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); color: ${usagePercent > 90 ? '#ef4444' : (usagePercent > 70 ? '#f59e0b' : '#10b981')};">${usagePercent}%</div>
+                            <div style="font-size: 0.75rem; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px;">Uso del límite</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Limits Info -->
+                    <div style="background: #f7fafc; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 0.875rem; color: #4a5568;">Límite asignado:</span>
+                            <span style="font-family: var(--font-mono); font-weight: 600; color: #0a0f1a;">${limits.upload} / ${limits.download}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.875rem; color: #4a5568;">Estado:</span>
+                            <span style="font-weight: 600; color: ${usagePercent > 90 ? '#ef4444' : (usagePercent > 70 ? '#f59e0b' : '#10b981')};">
+                                ${usagePercent > 90 ? '🔴 Crítico' : (usagePercent > 70 ? '🟡 Advertencia' : '🟢 Normal')}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- History Table -->
+                    <div>
+                        <h4 style="margin: 0 0 12px 0; font-size: 1rem; font-weight: 600; color: #0a0f1a;">
+                            <i class="fas fa-history"></i> Histórico de Consumo (Últimos 7 días)
+                        </h4>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #edf2f7;">
+                                    <th style="padding: 8px; text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #4a5568;">Fecha</th>
+                                    <th style="padding: 8px; text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #4a5568;">Descarga</th>
+                                    <th style="padding: 8px; text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #4a5568;">Subida</th>
+                                    <th style="padding: 8px; text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #4a5568;">Hora Pico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${historyHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `,
+            width: '700px',
+            showCloseButton: true,
+            showConfirmButton: false,
+            customClass: {
+                popup: 'muni-details-modal'
+            }
+        });
+    }
+    
+    /**
+     * Fallback: Show basic user modal (when backend not ready)
+     */
+    function showBasicUserModal(ip, name, department) {
+        Swal.fire({
+            title: name || 'Detalles del Usuario',
+            html: `
+                <div style="text-align: left;">
+                    <p><strong>IP:</strong> <code style="background: #f7fafc; padding: 4px 8px; border-radius: 4px;">${ip}</code></p>
+                    ${department ? `<p><strong>Departamento:</strong> ${department}</p>` : ''}
+                    <hr style="margin: 16px 0; border: 1px solid #e2e8f0;">
+                    <p style="color: #718096; font-size: 0.875rem;">
+                        <i class="fas fa-info-circle"></i> 
+                        El historial detallado de consumo se está implementando. 
+                        Próximamente disponible con gráficas de tendencia.
+                    </p>
+                </div>
+            `,
+            icon: 'info',
+            showCloseButton: true,
+            showConfirmButton: false
+        });
+    }
     
     window.handleCriticalUser = function(userId, ip, name, currentLimit) {
         Swal.fire({
