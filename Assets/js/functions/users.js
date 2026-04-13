@@ -8,7 +8,7 @@ document.addEventListener(
     table = $("#" + table_name)
       .DataTable({
         ajax: {
-          url: " " + base_url + "/users/list_records",
+          url: base_url + "/users/list_records",
           dataSrc: "",
         },
         deferRender: true,
