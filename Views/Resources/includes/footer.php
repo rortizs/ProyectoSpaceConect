@@ -5,6 +5,7 @@
 </div>
 <!-- ================== FIN FOOTER ================== -->
 <!-- ================== INICIO RUTA  ============== -->
+<?php $assets_version = '1.0.0'; ?>
 <script>
   const base_url = "<?= base_url(); ?>";
   const permission_create = "<?= empty($_SESSION['permits_module']['r']) ? 0 : $_SESSION['permits_module']['r'] ?>";
@@ -14,7 +15,7 @@
   const currency_symbol = "<?= empty($_SESSION['businessData']['symbol']) ? "" : $_SESSION['businessData']['symbol'] ?>";
   const user_profile = "<?= empty($_SESSION['userData']['profileid']) ? 0 : $_SESSION['userData']['profileid'] ?>";
   const key_google = "<?= empty($_SESSION['businessData']['google_apikey']) ? "" : $_SESSION['businessData']['google_apikey'] ?>";
-  const assets_version = '1.0.0'; // Same version as head.php
+  const assets_version = '1.0.0'; // Frontend-only mirror
 </script>
 <!-- ================== INICIO RUTA  ============== -->
 <!-- ================== CORE JS (Always loaded) ======== -->
@@ -39,7 +40,12 @@
 $page_route = $_GET['route'] ?? '';
 
 // DataTables - only on list/table pages
-if (strpos($page_route, 'list') !== false || strpos($page_route, 'routers') !== false || strpos($page_route, 'clients') !== false) {
+if (
+  strpos($page_route, 'list') !== false ||
+  strpos($page_route, 'routers') !== false ||
+  strpos($page_route, 'clients') !== false ||
+  strpos($page_route, 'users') !== false
+) {
 ?>
 <script src="<?= base_style() ?>/js/jquery.bootstrap-touchspin.min.js?v=<?= $assets_version ?>"></script>
 <script src="<?= base_style() ?>/js/datatables.min.js?v=<?= $assets_version ?>"></script>
