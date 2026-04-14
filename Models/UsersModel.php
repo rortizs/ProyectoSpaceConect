@@ -1,7 +1,7 @@
 <?php
     Class UsersModel extends Mysql{
         private $intId,$strNames,$strSurnames,$intType,$strDocument,$strMobile,$strEmail;
-        private $intProfile,$strUsername,$strPassword,$strImage,$strDatetime,$intState;
+        private $intProfile,$strUsername,$strPassword,$strImage,$strDatetime,$intState,$strToken;
         public function __construct(){
 			parent::__construct();
 		}
@@ -29,12 +29,13 @@
             $this->strImage = $image;
             $this->strDatetime = $datetime;
             $this->intState = $state;
+            $this->strToken = token();
             $answer = "";
             $sql = "SELECT * FROM users WHERE document = '{$this->strDocument}'";
 			$request = $this->select_all($sql);
             if(empty($request)){
-                $query = "INSERT INTO users(names,surnames,documentid,document,mobile,email,profileid, username,password,image,registration_date,state) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)";
-				$data = array($this->strNames,$this->strSurnames,$this->intType,$this->strDocument,$this->strMobile,$this->strEmail,$this->intProfile,$this->strUsername,$this->strPassword,$this->strImage,$this->strDatetime,$this->intState);
+                $query = "INSERT INTO users(names,surnames,documentid,document,mobile,email,profileid,username,password,image,registration_date,state,token) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)";
+				$data = array($this->strNames,$this->strSurnames,$this->intType,$this->strDocument,$this->strMobile,$this->strEmail,$this->intProfile,$this->strUsername,$this->strPassword,$this->strImage,$this->strDatetime,$this->intState,$this->strToken);
 				$insert = $this->insert($query,$data);
 				if($insert){
 					$answer = 'success';

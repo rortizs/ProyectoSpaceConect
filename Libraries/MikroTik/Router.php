@@ -267,9 +267,11 @@ public function APIModifyPPPSecret($id, $name, $address, $password, $localAddres
 
         $headers = array_merge($headers, $aheaders);
 
+        $scheme = ($this->port == 443) ? 'https' : 'http';
+
         curl_setopt_array($curl, [
             CURLOPT_PORT => $this->port,
-            CURLOPT_URL => "http://$this->host:$this->port/rest/$uri",
+            CURLOPT_URL => "$scheme://$this->host:$this->port/rest/$uri",
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => "",
             CURLOPT_MAXREDIRS => 10,
@@ -279,6 +281,8 @@ public function APIModifyPPPSecret($id, $name, $address, $password, $localAddres
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_POSTFIELDS => json_encode($body) ?? "",
             CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
         ]);
 
         $response = curl_exec($curl);

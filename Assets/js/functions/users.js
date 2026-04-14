@@ -1,14 +1,32 @@
 let table;
 let table_name = "list";
 var type_doc = document.querySelector("#listTypes");
-document.addEventListener(
-  "DOMContentLoaded",
-  function () {
+let usersTableInitialized = false;
+
+function initUsersPage() {
+  if (!document.querySelector("#" + table_name)) {
+    return;
+  }
+
+  if (usersTableInitialized) {
+    return;
+  }
+
+  if (typeof $ === "undefined" || !$.fn || !$.fn.DataTable) {
+    setTimeout(initUsersPage, 200);
+    return;
+  }
+
+  if ($.fn.DataTable.isDataTable("#" + table_name)) {
+    $("#" + table_name).DataTable().destroy();
+    $("#" + table_name + " tbody").empty();
+  }
+
     table_configuration("#" + table_name, "Lista de usuarios");
     table = $("#" + table_name)
       .DataTable({
         ajax: {
-          url: " " + base_url + "/users/list_records",
+          url: base_url + "/users/list_records",
           dataSrc: "",
         },
         deferRender: true,
@@ -84,9 +102,16 @@ document.addEventListener(
         var data = table.row(this).data();
         update(data.encrypt);
     });*/
-  },
-  false
-);
+
+  usersTableInitialized = true;
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initUsersPage, false);
+} else {
+  initUsersPage();
+}
+window.addEventListener("load", initUsersPage, false);
 window.addEventListener(
   "load",
   function () {

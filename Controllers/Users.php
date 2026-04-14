@@ -20,7 +20,7 @@ use Verot\Upload\Upload;
             $data['home_page'] = "Dashboard";
             $data['previous_page'] = "Ajustes";
             $data['actual_page'] = "Usuarios";
-            $data['page_functions_js'] = "users.js?v=1";
+            $data['page_functions_js'] = "users.js";
             $this->views->getView($this,"users",$data);
         }
         public function list_records(){

@@ -1,0 +1,820 @@
+/**
+ * Municipal Dashboard - Control Room Design System
+ * Technical monitoring interface with urgency-based visual hierarchy
+ */
+
+/* ===========================
+   MUNI PROGRESS LOADER
+   =========================== */
+
+/* Shared popup override */
+.muni-loader__popup {
+    border-radius: 16px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+.muni-loader__popup--sync {
+    border-top: 4px solid var(--infra-primary, #3b82f6) !important;
+}
+
+/* ── Level 2: Processing bar ── */
+.muni-loader__container {
+    padding: 28px 32px 24px;
+    text-align: center;
+}
+
+.muni-loader__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0a0f1a;
+    margin-bottom: 20px;
+    font-family: var(--font-ui, 'Inter', sans-serif);
+}
+
+.muni-loader__progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.muni-loader__progress-bar {
+    flex: 1;
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.muni-loader__progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #6366f1);
+    border-radius: 999px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.muni-loader__percent {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #3b82f6;
+    min-width: 42px;
+    text-align: right;
+}
+
+.muni-loader__current-step {
+    font-size: 0.875rem;
+    color: #4a5568;
+    margin-bottom: 16px;
+    min-height: 20px;
+    transition: opacity 0.3s ease;
+}
+
+.muni-loader__steps-list {
+    text-align: left;
+    background: #f7fafc;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.muni-loader__step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: #a0aec0;
+    transition: color 0.3s ease;
+}
+
+.muni-loader__step--active {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.muni-loader__step--done {
+    color: #10b981;
+}
+
+.muni-loader__step-icon {
+    font-size: 0.75rem;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.muni-loader__step-icon--done   { color: #10b981; }
+.muni-loader__step-icon--active { color: #3b82f6; animation: muniPulse 1s infinite; }
+.muni-loader__step-icon--pending{ color: #cbd5e0; }
+
+/* ── Level 3: Sync full animated ── */
+.muni-loader__sync-container {
+    padding: 32px 32px 24px;
+    text-align: center;
+}
+
+.muni-loader__sync-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.muni-loader__sync-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: muniSpin 0.8s linear infinite;
+}
+
+.muni-loader__sync-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0a0f1a;
+    margin-bottom: 20px;
+    font-family: var(--font-ui, 'Inter', sans-serif);
+}
+
+.muni-loader__sync-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.muni-loader__sync-bar {
+    flex: 1;
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+
+.muni-loader__sync-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden;
+    /* width is driven by JS requestAnimationFrame — no CSS transition here */
+}
+
+.muni-loader__sync-shine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    animation: muniShine 1.6s ease-in-out infinite;
+}
+
+.muni-loader__sync-percent {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #3b82f6;
+    min-width: 46px;
+    text-align: right;
+}
+
+.muni-loader__sync-step {
+    font-size: 0.875rem;
+    color: #4a5568;
+    margin: 10px 0 20px;
+    font-style: italic;
+    min-height: 20px;
+    transition: opacity 0.4s ease;
+}
+
+.muni-loader__sync-steps {
+    text-align: left;
+    background: #f7fafc;
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.muni-loader__sync-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8125rem;
+    color: #a0aec0;
+    transition: color 0.3s ease, font-weight 0.3s ease;
+}
+
+.muni-loader__sync-item--active {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.muni-loader__sync-item--done {
+    color: #10b981;
+}
+
+.muni-loader__sync-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    flex-shrink: 0;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.muni-loader__sync-dot--active {
+    background: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    animation: muniPulse 1s infinite;
+}
+
+.muni-loader__sync-dot--done {
+    background: #10b981;
+}
+
+.muni-loader__sync-label {
+    line-height: 1.3;
+}
+
+.muni-loader__sync-note {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    font-style: italic;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* ── Animations ── */
+@keyframes muniSpin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes muniShine {
+    0%   { left: -100%; }
+    50%  { left: 100%; }
+    100% { left: 100%; }
+}
+
+@keyframes muniPulse {
+    0%, 100% { transform: scale(1);    opacity: 1;   }
+    50%       { transform: scale(1.15); opacity: 0.7; }
+}
+
+/* ===========================
+   DESIGN TOKENS
+   =========================== */
+
+:root {
+  /* Typography */
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-ui: 'Inter', -apple-system, system-ui, sans-serif;
+  
+  /* Colors - Municipal Control Room */
+  --ink: #0a0f1a;
+  --ink-muted: #4a5568;
+  --surface: #ffffff;
+  --surface-raised: #f7fafc;
+  --surface-overlay: #edf2f7;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e0;
+  
+  /* Semantic - Traffic Signal Based */
+  --status-ok: #10b981;
+  --status-ok-bg: #d1fae5;
+  --status-warning: #f59e0b;
+  --status-warning-bg: #fef3c7;
+  --status-critical: #ef4444;
+  --status-critical-bg: #fee2e2;
+  
+  /* Infrastructure */
+  --infra-primary: #3b82f6;
+  --infra-secondary: #6366f1;
+  --infra-bg: #dbeafe;
+  
+  /* Spacing - Technical 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  
+  /* Shadows - Subtle depth */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* ===========================
+   TYPOGRAPHY
+   =========================== */
+
+.muni-dashboard {
+  font-family: var(--font-ui);
+  color: var(--ink);
+  font-feature-settings: 'tnum' 1; /* Tabular nums */
+}
+
+.muni-dashboard code,
+.muni-dashboard .monospace {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+/* ===========================
+   STATS CARDS - Redesigned
+   =========================== */
+
+.muni-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.muni-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  transition: all 150ms ease;
+}
+
+.muni-stat-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+.muni-stat-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+  margin-bottom: var(--space-2);
+}
+
+.muni-stat-card__value {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1;
+  margin-bottom: var(--space-2);
+}
+
+.muni-stat-card__meta {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.muni-stat-card__delta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.muni-stat-card__delta--positive {
+  color: var(--status-ok);
+  background: var(--status-ok-bg);
+}
+
+.muni-stat-card__delta--negative {
+  color: var(--status-critical);
+  background: var(--status-critical-bg);
+}
+
+/* Card variants */
+.muni-stat-card--ok { border-left: 3px solid var(--status-ok); }
+.muni-stat-card--warning { border-left: 3px solid var(--status-warning); }
+.muni-stat-card--critical { border-left: 3px solid var(--status-critical); }
+.muni-stat-card--info { border-left: 3px solid var(--infra-primary); }
+
+/* ===========================
+   EMPLOYEE TABLE - Redesigned
+   =========================== */
+
+.muni-table-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-base);
+  overflow: hidden;
+  margin-bottom: var(--space-6);
+}
+
+.muni-table-header {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-raised);
+}
+
+.muni-table-header__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.muni-table-header__meta {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.muni-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.muni-table thead th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.muni-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 100ms ease;
+}
+
+.muni-table tbody tr:hover {
+  background: var(--surface-raised);
+}
+
+.muni-table tbody td {
+  padding: var(--space-4);
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.muni-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+/* Table cell variants */
+.muni-table__rank {
+  width: 40px;
+  text-align: center;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.muni-table__employee {
+  min-width: 180px;
+}
+
+.muni-table__employee-name {
+  font-weight: 600;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.muni-table__employee-dept {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.muni-table__ip {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink);
+  background: var(--surface-overlay);
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* ===========================
+   GAUGE COMPONENT (Signature)
+   =========================== */
+
+.muni-gauge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.muni-gauge__visual {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.muni-gauge__circle {
+  transform: rotate(-90deg);
+}
+
+.muni-gauge__bg {
+  fill: none;
+  stroke: var(--surface-overlay);
+  stroke-width: 6;
+}
+
+.muni-gauge__fill {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms ease, stroke 300ms ease;
+}
+
+.muni-gauge__fill--ok { stroke: var(--status-ok); }
+.muni-gauge__fill--warning { stroke: var(--status-warning); }
+.muni-gauge__fill--critical { stroke: var(--status-critical); }
+
+.muni-gauge__label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.muni-gauge__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.muni-gauge__current {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.muni-gauge__limit {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+/* ===========================
+   RISK BADGES
+   =========================== */
+
+.muni-risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.muni-risk-badge--ok {
+  color: var(--status-ok);
+  background: var(--status-ok-bg);
+}
+
+.muni-risk-badge--warning {
+  color: #92400e;
+  background: var(--status-warning-bg);
+}
+
+.muni-risk-badge--critical {
+  color: #991b1b;
+  background: var(--status-critical-bg);
+}
+
+.muni-risk-badge--disabled {
+  color: var(--ink-muted);
+  background: var(--surface-overlay);
+}
+
+.muni-risk-badge__icon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.muni-risk-badge--ok .muni-risk-badge__icon { background: var(--status-ok); }
+.muni-risk-badge--warning .muni-risk-badge__icon { background: var(--status-warning); }
+.muni-risk-badge--critical .muni-risk-badge__icon { background: var(--status-critical); }
+.muni-risk-badge--disabled .muni-risk-badge__icon { background: var(--ink-muted); }
+
+/* ===========================
+   ACTION BUTTONS
+   =========================== */
+
+.muni-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.muni-action-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 120ms ease;
+  white-space: nowrap;
+}
+
+.muni-action-btn:hover {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+}
+
+.muni-action-btn--danger {
+  color: var(--status-critical);
+  border-color: var(--status-critical);
+}
+
+.muni-action-btn--danger:hover {
+  background: var(--status-critical-bg);
+}
+
+.muni-action-btn--primary {
+  color: var(--infra-primary);
+  border-color: var(--infra-primary);
+}
+
+.muni-action-btn--primary:hover {
+  background: var(--infra-bg);
+}
+
+/* ===========================
+   ALERTS TIMELINE
+   =========================== */
+
+.muni-alerts {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-base);
+  overflow: hidden;
+}
+
+.muni-alerts__header {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.muni-alerts__title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.muni-alerts__body {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.muni-alert-item {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: var(--space-3);
+  transition: background 100ms ease;
+}
+
+.muni-alert-item:last-child {
+  border-bottom: none;
+}
+
+.muni-alert-item:hover {
+  background: var(--surface-raised);
+}
+
+.muni-alert-item__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+
+.muni-alert-item__icon--critical {
+  background: var(--status-critical-bg);
+  color: var(--status-critical);
+}
+
+.muni-alert-item__icon--warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.muni-alert-item__icon--ok {
+  background: var(--status-ok-bg);
+  color: var(--status-ok);
+}
+
+.muni-alert-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.muni-alert-item__title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.muni-alert-item__detail {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  margin-bottom: 4px;
+}
+
+.muni-alert-item__time {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--ink-muted);
+}
+
+/* ===========================
+   UTILITY CLASSES
+   =========================== */
+
+.muni-empty-state {
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.muni-empty-state__icon {
+  font-size: 3rem;
+  opacity: 0.3;
+  margin-bottom: var(--space-4);
+}
+
+.muni-empty-state__text {
+  font-size: 0.9375rem;
+}
+
+/* Loading spinner override */
+.muni-loading {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .muni-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .muni-table-container {
+    overflow-x: auto;
+  }
+  
+  .muni-table {
+    min-width: 800px;
+  }
+  
+  .muni-gauge {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
