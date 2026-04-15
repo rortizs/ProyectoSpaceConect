@@ -75,7 +75,12 @@ class MuniSyncService extends BaseService
             // Check if queue already exists for this IP
             $existing = $this->router->APIGetQueuesSimple($user['ip_address']);
 
-            if (!empty($existing->data) && count($existing->data) > 0) {
+            $hasQueueData = is_array($existing->data ?? null)
+                && isset($existing->data[0])
+                && is_array($existing->data[0])
+                && isset($existing->data[0]['.id']);
+
+            if ($hasQueueData) {
                 // Update existing queue (API returns arrays)
                 $queueId = $existing->data[0]['.id'];
                 $result = $this->router->APIModifyQueuesSimple($queueId, $queueName, $target, $maxLimit);
@@ -159,7 +164,12 @@ class MuniSyncService extends BaseService
         try {
             $existing = $this->router->APIGetQueuesSimple($user['ip_address']);
 
-            if (!empty($existing->data) && count($existing->data) > 0) {
+            $hasQueueData = is_array($existing->data ?? null)
+                && isset($existing->data[0])
+                && is_array($existing->data[0])
+                && isset($existing->data[0]['.id']);
+
+            if ($hasQueueData) {
                 // API returns arrays
                 $queueId = $existing->data[0]['.id'];
 
@@ -213,6 +223,7 @@ class MuniSyncService extends BaseService
     {
         $res = (object) ['success' => false, 'synced' => 0, 'errors' => []];
 
+        // Read all active users in the department
         $users = $this->model->getUsersByDepartment($dept_id);
 
         if (empty($users)) {
@@ -226,7 +237,39 @@ class MuniSyncService extends BaseService
             return $res;
         }
 
+        // Build set of existing queue IPs in router to detect missing queues
+        $existingQueueIPs = [];
+        $listResult = $this->router->APIListQueuesSimple();
+        if ($listResult->success && is_array($listResult->data)) {
+            foreach ($listResult->data as $q) {
+                $targetRaw = '';
+                if (is_array($q)) {
+                    $targetRaw = $q['target'] ?? '';
+                } elseif (is_object($q)) {
+                    $targetRaw = $q->target ?? '';
+                }
+
+                if (!empty($targetRaw)) {
+                    // target can come as: "10.100.0.10/32" or "10.100.0.10/32,0.0.0.0/0"
+                    $firstTarget = explode(',', $targetRaw)[0];
+                    $ip = str_replace('/32', '', trim($firstTarget));
+                    if (!empty($ip)) {
+                        $existingQueueIPs[$ip] = true;
+                    }
+                }
+            }
+        }
+
         foreach ($users as $user) {
+            $ip = $user['ip_address'] ?? '';
+            $syncStatus = $user['queue_sync_status'] ?? '';
+
+            // Sync when explicitly pending/error OR when queue is missing in router
+            $needsSync = ($syncStatus !== 'synced') || empty($existingQueueIPs[$ip]);
+            if (!$needsSync) {
+                continue;
+            }
+
             $result = $this->syncUserQueue($user['id']);
 
             if ($result->success) {
@@ -406,7 +449,19 @@ class MuniSyncService extends BaseService
         $res->results['qos_status'] = $this->getQoSStatus();
 
         // 3. Sync content filtering
-        $res->results['filtering'] = $this->syncContentFiltering();
+        // Legacy RouterOS API can make this stage very slow/noisy in full sync;
+        // keep full-sync fast and stable by skipping filtering here for legacy routers.
+        if ($this->router instanceof RouterLegacy) {
+            $res->results['filtering'] = (object) [
+                'success' => true,
+                'blocked' => 0,
+                'whitelisted' => 0,
+                'errors' => [],
+                'message' => 'Filtrado omitido en syncAll para router legacy (use sincronización de filtrado dedicada).',
+            ];
+        } else {
+            $res->results['filtering'] = $this->syncContentFiltering();
+        }
 
         $res->success = true;
         $res->message = sprintf(

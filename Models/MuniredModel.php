@@ -349,6 +349,21 @@ class MuniredModel extends Mysql
         return $this->select_all($sql);
     }
 
+    public function getUsersPendingSyncByDepartment(int $dept_id)
+    {
+        $sql = "SELECT mu.*,
+                    md.default_upload,
+                    md.default_download
+                FROM muni_users mu
+                JOIN muni_departments md ON mu.department_id = md.id
+                WHERE mu.department_id = $dept_id
+                  AND mu.status = 1
+                  AND (mu.queue_sync_status IS NULL OR mu.queue_sync_status != 'synced')
+                ORDER BY mu.ip_address ASC";
+
+        return $this->select_all($sql);
+    }
+
     private function getDeptNameById(int $id): string
     {
         $dept = $this->select("SELECT name FROM muni_departments WHERE id = $id");
