@@ -923,7 +923,17 @@ class Munired extends Controllers
     {
         if ($_POST && $_SESSION['permits_module']['a']) {
             $router_id = intval($_POST['router_id']);
-            session_write_close(); // Release session lock before router call
+            $userId = intval($_SESSION['idUser'] ?? 0);
+
+            // Long-running operation: release session lock and extend execution window
+            session_write_close();
+            ignore_user_abort(true);
+            if (function_exists('set_time_limit')) {
+                @set_time_limit(900);
+            }
+            @ini_set('max_execution_time', '900');
+            @ini_set('default_socket_timeout', '900');
+
             $this->initSyncService($router_id);
 
             if (!$this->syncService) {
@@ -934,7 +944,7 @@ class Munired extends Controllers
             $result = $this->syncService->syncAll();
 
             $this->model->logAction(
-                $_SESSION['idUser'],
+                $userId,
                 'sync_all',
                 'system',
                 null,

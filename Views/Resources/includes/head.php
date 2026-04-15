@@ -30,7 +30,7 @@
     }
     
     // Version for cache busting (change only when assets actually change)
-    $assets_version = '1.0.0';
+    $assets_version = '1.0.2';
     ?>
     <!-- ================== INICIO ICONO ================== -->
     <link rel="icon" type="image/x-icon" href="<?= $favicon ?>">

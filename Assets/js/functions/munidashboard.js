@@ -10,6 +10,12 @@
     let routerConnected = false;
     
     document.addEventListener('DOMContentLoaded', function () {
+        // Hide legacy page loader overlay once dashboard JS initializes
+        let divLoading = document.getElementById('divLoading');
+        if (divLoading) {
+            divLoading.style.display = 'none';
+        }
+
         loadRouters();
     });
     
@@ -817,21 +823,55 @@
                     setTimeout(() => loader.next(), 7500),   // → Eliminando huérfanas
                 ];
     
-                $.post(base_url + '/munired/syncAll', { router_id: selectedRouterId }, function (response) {
-                    // Clear pending timers — real response arrived
-                    stepTimers.forEach(t => clearTimeout(t));
-                    
-                    let res = JSON.parse(response);
-                    if (res.status === 'success') {
-                        loader.done('Sincronización completada', res.msg);
-                    } else {
-                        loader.done('Sincronización con advertencias', res.msg);
+                $.ajax({
+                    url: base_url + '/munired/syncAll',
+                    method: 'POST',
+                    data: { router_id: selectedRouterId },
+                    timeout: 900000,
+                    success: function (response) {
+                        stepTimers.forEach(t => clearTimeout(t));
+
+                        let res = null;
+                        try {
+                            res = (typeof response === 'string') ? JSON.parse(response) : response;
+                        } catch (e) {
+                            loader.fail('Respuesta inválida del servidor durante la sincronización');
+                            return;
+                        }
+
+                        if (!res || typeof res !== 'object') {
+                            loader.fail('No se recibió una respuesta válida del servidor');
+                            return;
+                        }
+
+                        if (res.status === 'success') {
+                            loader.done('Sincronización completada', res.msg || 'Operación finalizada');
+                        } else {
+                            loader.done('Sincronización con advertencias', res.msg || 'La sincronización finalizó con observaciones');
+                        }
+                        loadBandwidthStats();
+                        loadAlerts();
+                    },
+                    error: function (xhr, textStatus) {
+                        stepTimers.forEach(t => clearTimeout(t));
+
+                        if (textStatus === 'timeout') {
+                            loader.fail('La sincronización superó el tiempo límite (3 min). Intente nuevamente o revise conexión al router.');
+                            return;
+                        }
+
+                        if (xhr && xhr.status === 504) {
+                            loader.fail('Timeout del servidor (504) al sincronizar con MikroTik.');
+                            return;
+                        }
+
+                        if (xhr && xhr.status === 302) {
+                            loader.fail('Sesión expirada durante la sincronización. Inicie sesión nuevamente.');
+                            return;
+                        }
+
+                        loader.fail('No se pudo completar la sincronización (' + (xhr.status || 'sin código') + ').');
                     }
-                    loadBandwidthStats();
-                    loadAlerts();
-                }).fail(function() {
-                    stepTimers.forEach(t => clearTimeout(t));
-                    loader.fail('No se pudo conectar con el servidor');
                 });
             }
         });

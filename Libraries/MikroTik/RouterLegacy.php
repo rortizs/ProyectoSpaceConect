@@ -122,7 +122,7 @@ class RouterLegacy
         
         try {
             $response = $this->api->comm('/ip/dns/static/print', array(
-                '?name=' . $domain
+                '?name' => $domain
             ));
             
             $res->success = true;
@@ -224,6 +224,101 @@ class RouterLegacy
         }
         
         return $results;
+    }
+
+    // =============================================
+    // FIREWALL ADDRESS-LIST METHODS (Legacy API)
+    // =============================================
+
+    public function APIGetFirewallAddress($address, $list)
+    {
+        $res = (object) array();
+
+        if (!$this->connected) {
+            $res->success = false;
+            $res->error = "Not connected";
+            return $res;
+        }
+
+        try {
+            $response = $this->api->comm('/ip/firewall/address-list/print', array(
+                '?address' => $address,
+                '?list' => $list,
+            ));
+
+            $res->success = true;
+            $res->data = is_array($response) ? $response : array();
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+
+        return $res;
+    }
+
+    public function APIAddFirewallAddress($address, $list, $comment)
+    {
+        $res = (object) array();
+
+        if (!$this->connected) {
+            $res->success = false;
+            $res->error = "Not connected";
+            return $res;
+        }
+
+        try {
+            $existing = $this->APIGetFirewallAddress($address, $list);
+            if ($existing->success && is_array($existing->data) && count($existing->data) > 0) {
+                $res->success = false;
+                $res->message = "Address already exists";
+                return $res;
+            }
+
+            $response = $this->api->comm('/ip/firewall/address-list/add', array(
+                'address' => $address,
+                'list' => $list,
+                'comment' => $comment,
+            ));
+
+            $res->success = true;
+            $res->data = $response;
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+
+        return $res;
+    }
+
+    public function APIRemoveFirewallAddress($address, $list)
+    {
+        $res = (object) array();
+
+        if (!$this->connected) {
+            $res->success = false;
+            $res->error = "Not connected";
+            return $res;
+        }
+
+        try {
+            $entries = $this->APIGetFirewallAddress($address, $list);
+            if ($entries->success && is_array($entries->data) && count($entries->data) > 0) {
+                foreach ($entries->data as $entry) {
+                    if (isset($entry['.id'])) {
+                        $this->api->comm('/ip/firewall/address-list/remove', array(
+                            '.id' => $entry['.id']
+                        ));
+                    }
+                }
+            }
+
+            $res->success = true;
+        } catch (Exception $e) {
+            $res->success = false;
+            $res->error = $e->getMessage();
+        }
+
+        return $res;
     }
     
     public function disconnect()
