@@ -963,6 +963,158 @@ class Munired extends Controllers
         die();
     }
 
+    /**
+     * Option B: Start full sync asynchronously and return a job_id immediately.
+     * The same PHP worker continues in background after flushing response.
+     */
+    public function syncAllAsync()
+    {
+        if (!($_POST && $_SESSION['permits_module']['a'])) {
+            echo json_encode(['status' => 'error', 'msg' => 'Solicitud invalida o sin permisos.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+
+        $router_id = intval($_POST['router_id'] ?? 0);
+        $userId = intval($_SESSION['idUser'] ?? 0);
+
+        if ($router_id <= 0) {
+            echo json_encode(['status' => 'error', 'msg' => 'Router invalido.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+
+        $jobId = $this->generateSyncJobId();
+        $job = [
+            'job_id' => $jobId,
+            'router_id' => $router_id,
+            'user_id' => $userId,
+            'status' => 'pending',
+            'progress' => 5,
+            'stage' => 'queued',
+            'message' => 'Sincronización en cola',
+            'result' => null,
+            'created_at' => date('c'),
+            'started_at' => null,
+            'finished_at' => null,
+        ];
+
+        if (!$this->writeSyncJob($jobId, $job)) {
+            echo json_encode(['status' => 'error', 'msg' => 'No se pudo crear el job de sincronización.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+
+        // Fast response to client (no long blocking request)
+        echo json_encode([
+            'status' => 'accepted',
+            'job_id' => $jobId,
+            'msg' => 'Sincronización iniciada en segundo plano',
+        ], JSON_UNESCAPED_UNICODE);
+
+        if (function_exists('fastcgi_finish_request')) {
+            @fastcgi_finish_request();
+        } else {
+            @ob_flush();
+            @flush();
+        }
+
+        // Background execution
+        session_write_close();
+        ignore_user_abort(true);
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(900);
+        }
+        @ini_set('max_execution_time', '900');
+        @ini_set('default_socket_timeout', '900');
+
+        try {
+            $job['status'] = 'running';
+            $job['progress'] = 20;
+            $job['stage'] = 'initializing';
+            $job['message'] = 'Inicializando servicio de sincronización';
+            $job['started_at'] = date('c');
+            $this->writeSyncJob($jobId, $job);
+
+            $this->initSyncService($router_id);
+            if (!$this->syncService) {
+                throw new Exception('No se pudo inicializar el servicio de sync.');
+            }
+
+            $job['progress'] = 60;
+            $job['stage'] = 'syncing';
+            $job['message'] = 'Sincronizando con el router MikroTik';
+            $this->writeSyncJob($jobId, $job);
+
+            $result = $this->syncService->syncAll();
+
+            $this->model->logAction(
+                $userId,
+                'sync_all_async',
+                'system',
+                null,
+                $result->message,
+                $result->success ? 'success' : 'error'
+            );
+
+            $job['status'] = $result->success ? 'success' : 'warning';
+            $job['progress'] = 100;
+            $job['stage'] = 'completed';
+            $job['message'] = $result->message;
+            $job['result'] = $result->results;
+            $job['finished_at'] = date('c');
+            $this->writeSyncJob($jobId, $job);
+        } catch (Throwable $e) {
+            $job['status'] = 'error';
+            $job['progress'] = 100;
+            $job['stage'] = 'failed';
+            $job['message'] = 'Error en syncAll async: ' . $e->getMessage();
+            $job['finished_at'] = date('c');
+            $this->writeSyncJob($jobId, $job);
+        }
+
+        $this->cleanupOldSyncJobs();
+        die();
+    }
+
+    public function syncAllStatus()
+    {
+        if (!$_SESSION['permits_module']['v']) {
+            echo json_encode(['status' => 'error', 'msg' => 'Sin permisos para consultar estado.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+
+        $jobId = strClean($_POST['job_id'] ?? $_GET['job_id'] ?? '');
+        if (!preg_match('/^[a-f0-9]{32}$/', $jobId)) {
+            echo json_encode(['status' => 'error', 'msg' => 'job_id invalido.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+
+        $job = $this->readSyncJob($jobId);
+        if (empty($job)) {
+            echo json_encode(['status' => 'error', 'msg' => 'Job no encontrado o expirado.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+
+        // Basic ownership guard: the same user who started the job can read it.
+        if (intval($job['user_id'] ?? 0) !== intval($_SESSION['idUser'] ?? 0)) {
+            echo json_encode(['status' => 'error', 'msg' => 'No autorizado para consultar este job.'], JSON_UNESCAPED_UNICODE);
+            die();
+        }
+
+        echo json_encode([
+            'status' => $job['status'] ?? 'pending',
+            'msg' => $job['message'] ?? '',
+            'data' => [
+                'job_id' => $job['job_id'] ?? $jobId,
+                'progress' => intval($job['progress'] ?? 0),
+                'stage' => $job['stage'] ?? '',
+                'result' => $job['result'] ?? null,
+                'created_at' => $job['created_at'] ?? null,
+                'started_at' => $job['started_at'] ?? null,
+                'finished_at' => $job['finished_at'] ?? null,
+            ],
+        ], JSON_UNESCAPED_UNICODE);
+        die();
+    }
+
     // =============================================
     // ROUTER HELPERS
     // =============================================
@@ -1039,6 +1191,77 @@ class Munired extends Controllers
         $mysql = new Mysql();
         $result = $mysql->select("SELECT MAX(id) AS last_id FROM muni_users");
         return intval($result['last_id'] ?? 0);
+    }
+
+    private function generateSyncJobId(): string
+    {
+        try {
+            return bin2hex(random_bytes(16));
+        } catch (Exception $e) {
+            return md5(uniqid('sync_job_', true) . microtime(true));
+        }
+    }
+
+    private function getSyncJobDir(): string
+    {
+        return rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'spaceconnect_sync_jobs';
+    }
+
+    private function getSyncJobFilePath(string $jobId): string
+    {
+        return $this->getSyncJobDir() . DIRECTORY_SEPARATOR . $jobId . '.json';
+    }
+
+    private function writeSyncJob(string $jobId, array $payload): bool
+    {
+        $dir = $this->getSyncJobDir();
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+            return false;
+        }
+
+        $json = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            return false;
+        }
+
+        return @file_put_contents($this->getSyncJobFilePath($jobId), $json, LOCK_EX) !== false;
+    }
+
+    private function readSyncJob(string $jobId): ?array
+    {
+        $file = $this->getSyncJobFilePath($jobId);
+        if (!is_file($file)) {
+            return null;
+        }
+
+        $content = @file_get_contents($file);
+        if ($content === false || $content === '') {
+            return null;
+        }
+
+        $data = json_decode($content, true);
+        return is_array($data) ? $data : null;
+    }
+
+    private function cleanupOldSyncJobs(int $maxAgeSeconds = 86400): void
+    {
+        $dir = $this->getSyncJobDir();
+        if (!is_dir($dir)) {
+            return;
+        }
+
+        $files = @glob($dir . DIRECTORY_SEPARATOR . '*.json');
+        if (!is_array($files)) {
+            return;
+        }
+
+        $now = time();
+        foreach ($files as $file) {
+            $mtime = @filemtime($file);
+            if ($mtime !== false && ($now - $mtime) > $maxAgeSeconds) {
+                @unlink($file);
+            }
+        }
     }
 
     private function getSyncBadge(string $status = null): string
