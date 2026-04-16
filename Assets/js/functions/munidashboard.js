@@ -822,46 +822,133 @@
                     setTimeout(() => loader.next(), 5500),   // → Actualizando existentes
                     setTimeout(() => loader.next(), 7500),   // → Eliminando huérfanas
                 ];
-    
+
+                const clearStepTimers = () => stepTimers.forEach(t => clearTimeout(t));
+
+                let pollTimer = null;
+                let pollInFlight = false;
+                const pollStartedAt = Date.now();
+                const POLL_INTERVAL_MS = 2000;
+                const POLL_MAX_MS = 20 * 60 * 1000; // 20 minutes
+
+                const stopPolling = () => {
+                    if (pollTimer) {
+                        clearInterval(pollTimer);
+                        pollTimer = null;
+                    }
+                };
+
+                const handleFinalState = (statusData) => {
+                    stopPolling();
+                    clearStepTimers();
+
+                    const state = statusData.status || 'error';
+                    const msg = statusData.msg || 'Sin mensaje del servidor';
+
+                    if (state === 'success' || state === 'warning') {
+                        loader.done(
+                            state === 'success' ? 'Sincronización completada' : 'Sincronización con advertencias',
+                            msg
+                        );
+                        loadBandwidthStats();
+                        loadAlerts();
+                        return;
+                    }
+
+                    loader.fail(msg);
+                };
+
+                const pollJobStatus = (jobId) => {
+                    pollTimer = setInterval(() => {
+                        if (pollInFlight) return;
+                        pollInFlight = true;
+
+                        $.ajax({
+                            url: base_url + '/munired/syncAllStatus',
+                            method: 'POST',
+                            data: { job_id: jobId },
+                            timeout: 30000,
+                            success: function (response) {
+                                pollInFlight = false;
+
+                                let res = null;
+                                try {
+                                    res = (typeof response === 'string') ? JSON.parse(response) : response;
+                                } catch (e) {
+                                    return;
+                                }
+
+                                if (!res || typeof res !== 'object') {
+                                    return;
+                                }
+
+                                const state = res.status || 'pending';
+                                const data = res.data || {};
+
+                                if (state === 'pending' || state === 'accepted' || state === 'running') {
+                                    const backendProgress = parseInt(data.progress || 0, 10);
+                                    const uiProgress = Math.max(backendProgress, 95);
+                                    loader.setPercent(uiProgress, res.msg || 'Sincronización en progreso en segundo plano...');
+
+                                    if ((Date.now() - pollStartedAt) > POLL_MAX_MS) {
+                                        stopPolling();
+                                        clearStepTimers();
+                                        loader.fail('La sincronización en segundo plano tardó demasiado. Revise estado del router y vuelva a intentar.');
+                                    }
+                                    return;
+                                }
+
+                                handleFinalState(res);
+                            },
+                            error: function () {
+                                pollInFlight = false;
+
+                                if ((Date.now() - pollStartedAt) > POLL_MAX_MS) {
+                                    stopPolling();
+                                    clearStepTimers();
+                                    loader.fail('No se pudo confirmar el estado final de la sincronización.');
+                                }
+                            }
+                        });
+                    }, POLL_INTERVAL_MS);
+                };
+
                 $.ajax({
-                    url: base_url + '/munired/syncAll',
+                    url: base_url + '/munired/syncAllAsync',
                     method: 'POST',
                     data: { router_id: selectedRouterId },
-                    timeout: 900000,
+                    timeout: 30000,
                     success: function (response) {
-                        stepTimers.forEach(t => clearTimeout(t));
-
                         let res = null;
                         try {
                             res = (typeof response === 'string') ? JSON.parse(response) : response;
                         } catch (e) {
+                            clearStepTimers();
                             loader.fail('Respuesta inválida del servidor durante la sincronización');
                             return;
                         }
 
                         if (!res || typeof res !== 'object') {
+                            clearStepTimers();
                             loader.fail('No se recibió una respuesta válida del servidor');
                             return;
                         }
 
-                        if (res.status === 'success') {
-                            loader.done('Sincronización completada', res.msg || 'Operación finalizada');
-                        } else {
-                            loader.done('Sincronización con advertencias', res.msg || 'La sincronización finalizó con observaciones');
-                        }
-                        loadBandwidthStats();
-                        loadAlerts();
-                    },
-                    error: function (xhr, textStatus) {
-                        stepTimers.forEach(t => clearTimeout(t));
-
-                        if (textStatus === 'timeout') {
-                            loader.fail('La sincronización superó el tiempo límite (3 min). Intente nuevamente o revise conexión al router.');
+                        if (res.status !== 'accepted' || !res.job_id) {
+                            clearStepTimers();
+                            loader.fail(res.msg || 'No se pudo iniciar la sincronización en segundo plano');
                             return;
                         }
 
-                        if (xhr && xhr.status === 504) {
-                            loader.fail('Timeout del servidor (504) al sincronizar con MikroTik.');
+                        loader.setPercent(96, 'Sincronización ejecutándose en segundo plano...');
+                        pollJobStatus(res.job_id);
+                    },
+                    error: function (xhr, textStatus) {
+                        clearStepTimers();
+                        stopPolling();
+
+                        if (textStatus === 'timeout') {
+                            loader.fail('No se pudo iniciar el job de sincronización (timeout inicial).');
                             return;
                         }
 
