@@ -991,9 +991,12 @@ class Munired extends Controllers
             'progress' => 5,
             'stage' => 'queued',
             'message' => 'Sincronización en cola',
+            'last_error' => null,
+            'details' => null,
             'result' => null,
             'created_at' => date('c'),
             'started_at' => null,
+            'updated_at' => date('c'),
             'finished_at' => null,
         ];
 
@@ -1031,6 +1034,7 @@ class Munired extends Controllers
             $job['stage'] = 'initializing';
             $job['message'] = 'Inicializando servicio de sincronización';
             $job['started_at'] = date('c');
+            $job['updated_at'] = date('c');
             $this->writeSyncJob($jobId, $job);
 
             $this->initSyncService($router_id);
@@ -1038,12 +1042,27 @@ class Munired extends Controllers
                 throw new Exception('No se pudo inicializar el servicio de sync.');
             }
 
-            $job['progress'] = 60;
-            $job['stage'] = 'syncing';
-            $job['message'] = 'Sincronizando con el router MikroTik';
-            $this->writeSyncJob($jobId, $job);
+            $result = $this->syncService->syncAll(function (array $progressData) use (&$job, $jobId) {
+                if (!empty($progressData['progress'])) {
+                    $job['progress'] = max(0, min(99, intval($progressData['progress'])));
+                }
+                if (!empty($progressData['stage'])) {
+                    $job['stage'] = strval($progressData['stage']);
+                }
+                if (!empty($progressData['message'])) {
+                    $job['message'] = strval($progressData['message']);
+                }
+                if (array_key_exists('last_error', $progressData) && !empty($progressData['last_error'])) {
+                    $job['last_error'] = strval($progressData['last_error']);
+                }
+                if (array_key_exists('details', $progressData)) {
+                    $job['details'] = $progressData['details'];
+                }
 
-            $result = $this->syncService->syncAll();
+                $job['status'] = 'running';
+                $job['updated_at'] = date('c');
+                $this->writeSyncJob($jobId, $job);
+            });
 
             $this->model->logAction(
                 $userId,
@@ -1058,7 +1077,16 @@ class Munired extends Controllers
             $job['progress'] = 100;
             $job['stage'] = 'completed';
             $job['message'] = $result->message;
+            $queueErrors = $result->results['queues']->errors ?? [];
+            $job['last_error'] = !empty($queueErrors) ? ($queueErrors[0]['error'] ?? null) : null;
             $job['result'] = $result->results;
+            $job['details'] = [
+                'queue_synced' => intval($result->results['queues']->synced ?? 0),
+                'queue_errors' => count($result->results['queues']->errors ?? []),
+                'qos_trees' => count($result->results['qos_status']->trees ?? []),
+                'filter_blocked' => intval($result->results['filtering']->blocked ?? 0),
+            ];
+            $job['updated_at'] = date('c');
             $job['finished_at'] = date('c');
             $this->writeSyncJob($jobId, $job);
         } catch (Throwable $e) {
@@ -1066,6 +1094,8 @@ class Munired extends Controllers
             $job['progress'] = 100;
             $job['stage'] = 'failed';
             $job['message'] = 'Error en syncAll async: ' . $e->getMessage();
+            $job['last_error'] = $e->getMessage();
+            $job['updated_at'] = date('c');
             $job['finished_at'] = date('c');
             $this->writeSyncJob($jobId, $job);
         }
@@ -1099,6 +1129,25 @@ class Munired extends Controllers
             die();
         }
 
+        // Watchdog: if job remains running too long without heartbeat, mark as timeout error.
+        $status = strval($job['status'] ?? 'pending');
+        if (in_array($status, ['pending', 'accepted', 'running'], true)) {
+            $heartbeatAt = $job['updated_at'] ?? $job['started_at'] ?? $job['created_at'] ?? null;
+            $heartbeatTs = $heartbeatAt ? strtotime($heartbeatAt) : false;
+            $staleSeconds = 3 * 60; // 3 minutes without heartbeat
+
+            if ($heartbeatTs !== false && (time() - $heartbeatTs) > $staleSeconds) {
+                $job['status'] = 'error';
+                $job['progress'] = 100;
+                $job['stage'] = 'timeout';
+                $job['message'] = 'El job quedó sin avance durante varios minutos y fue marcado como timeout.';
+                $job['last_error'] = $job['last_error'] ?? 'Timeout por falta de heartbeat';
+                $job['updated_at'] = date('c');
+                $job['finished_at'] = date('c');
+                $this->writeSyncJob($jobId, $job);
+            }
+        }
+
         echo json_encode([
             'status' => $job['status'] ?? 'pending',
             'msg' => $job['message'] ?? '',
@@ -1106,9 +1155,12 @@ class Munired extends Controllers
                 'job_id' => $job['job_id'] ?? $jobId,
                 'progress' => intval($job['progress'] ?? 0),
                 'stage' => $job['stage'] ?? '',
+                'last_error' => $job['last_error'] ?? null,
+                'details' => $job['details'] ?? null,
                 'result' => $job['result'] ?? null,
                 'created_at' => $job['created_at'] ?? null,
                 'started_at' => $job['started_at'] ?? null,
+                'updated_at' => $job['updated_at'] ?? null,
                 'finished_at' => $job['finished_at'] ?? null,
             ],
         ], JSON_UNESCAPED_UNICODE);

@@ -219,21 +219,49 @@ class MuniSyncService extends BaseService
     /**
      * Sync all active users' queues in a department
      */
-    public function syncDepartmentQueues(int $dept_id): object
+    public function syncDepartmentQueues(int $dept_id, ?callable $progressCallback = null): object
     {
         $res = (object) ['success' => false, 'synced' => 0, 'errors' => []];
 
+        $deptInfo = $this->model->getDepartment($dept_id);
+        $deptName = $deptInfo['name'] ?? ('Departamento ' . $dept_id);
+
         // Read all active users in the department
         $users = $this->model->getUsersByDepartment($dept_id);
+        $totalUsers = count($users);
+        $processed = 0;
 
         if (empty($users)) {
             $res->success = true;
             $res->message = 'No hay usuarios activos en este departamento';
+            if (is_callable($progressCallback)) {
+                $progressCallback([
+                    'stage' => 'queues_department_done',
+                    'message' => "{$deptName}: sin usuarios activos",
+                    'details' => [
+                        'department_id' => $dept_id,
+                        'department_name' => $deptName,
+                        'processed' => 0,
+                        'total' => 0,
+                    ],
+                ]);
+            }
             return $res;
         }
 
         if (!$this->connectRouter()) {
             $res->message = 'No se pudo conectar al router';
+            if (is_callable($progressCallback)) {
+                $progressCallback([
+                    'stage' => 'queues_department_error',
+                    'message' => "{$deptName}: no se pudo conectar al router",
+                    'last_error' => 'No se pudo conectar al router',
+                    'details' => [
+                        'department_id' => $dept_id,
+                        'department_name' => $deptName,
+                    ],
+                ]);
+            }
             return $res;
         }
 
@@ -264,16 +292,51 @@ class MuniSyncService extends BaseService
             $ip = $user['ip_address'] ?? '';
             $syncStatus = $user['queue_sync_status'] ?? '';
 
+            if (is_callable($progressCallback)) {
+                $progressCallback([
+                    'stage' => 'queues_user_syncing',
+                    'message' => "{$deptName}: sincronizando {$user['name']} ({$ip})",
+                    'details' => [
+                        'department_id' => $dept_id,
+                        'department_name' => $deptName,
+                        'current_user_id' => $user['id'],
+                        'current_user_name' => $user['name'],
+                        'current_user_ip' => $ip,
+                        'processed' => $processed,
+                        'total' => $totalUsers,
+                    ],
+                ]);
+            }
+
             // Sync when explicitly pending/error OR when queue is missing in router
             $needsSync = ($syncStatus !== 'synced') || empty($existingQueueIPs[$ip]);
             if (!$needsSync) {
+                $processed++;
                 continue;
             }
 
             $result = $this->syncUserQueue($user['id']);
+            $processed++;
 
             if ($result->success) {
                 $res->synced++;
+                if (is_callable($progressCallback)) {
+                    $progressCallback([
+                        'stage' => 'queues_user_synced',
+                        'message' => "{$deptName}: usuario {$user['name']} sincronizado",
+                        'details' => [
+                            'department_id' => $dept_id,
+                            'department_name' => $deptName,
+                            'current_user_id' => $user['id'],
+                            'current_user_name' => $user['name'],
+                            'current_user_ip' => $ip,
+                            'processed' => $processed,
+                            'total' => $totalUsers,
+                            'synced' => $res->synced,
+                            'errors' => count($res->errors),
+                        ],
+                    ]);
+                }
             } else {
                 $res->errors[] = [
                     'user_id' => $user['id'],
@@ -281,11 +344,45 @@ class MuniSyncService extends BaseService
                     'ip' => $user['ip_address'],
                     'error' => $result->message,
                 ];
+                if (is_callable($progressCallback)) {
+                    $progressCallback([
+                        'stage' => 'queues_user_error',
+                        'message' => "{$deptName}: error al sincronizar {$user['name']}",
+                        'last_error' => $result->message,
+                        'details' => [
+                            'department_id' => $dept_id,
+                            'department_name' => $deptName,
+                            'current_user_id' => $user['id'],
+                            'current_user_name' => $user['name'],
+                            'current_user_ip' => $ip,
+                            'processed' => $processed,
+                            'total' => $totalUsers,
+                            'synced' => $res->synced,
+                            'errors' => count($res->errors),
+                        ],
+                    ]);
+                }
             }
         }
 
         $res->success = empty($res->errors);
         $res->message = "Sincronizados: {$res->synced}, Errores: " . count($res->errors);
+
+        if (is_callable($progressCallback)) {
+            $progressCallback([
+                'stage' => 'queues_department_done',
+                'message' => "{$deptName}: {$res->message}",
+                'details' => [
+                    'department_id' => $dept_id,
+                    'department_name' => $deptName,
+                    'processed' => $processed,
+                    'total' => $totalUsers,
+                    'synced' => $res->synced,
+                    'errors' => count($res->errors),
+                ],
+            ]);
+        }
+
         return $res;
     }
 
@@ -418,7 +515,7 @@ class MuniSyncService extends BaseService
      * Full sync: all user queues (Simple Queues) + content filtering
      * Note: Queue Trees are managed by Digicom (DESCARGAS/SUBIDAS) — we only read their status
      */
-    public function syncAll(): object
+    public function syncAll(?callable $progressCallback = null): object
     {
         $res = (object) [
             'success' => false,
@@ -429,6 +526,14 @@ class MuniSyncService extends BaseService
             ],
         ];
 
+        if (is_callable($progressCallback)) {
+            $progressCallback([
+                'stage' => 'connect_router',
+                'progress' => 15,
+                'message' => 'Conectando al router',
+            ]);
+        }
+
         if (!$this->connectRouter()) {
             $res->message = 'No se pudo conectar al router. Verifique que la API REST este habilitada.';
             return $res;
@@ -436,16 +541,94 @@ class MuniSyncService extends BaseService
 
         // 1. Sync all department queues (Simple Queues per user)
         $departments = $this->model->getDepartments($this->routerId);
+        $totalDepartments = count($departments);
         $queueResults = (object) ['synced' => 0, 'errors' => []];
 
+        if (is_callable($progressCallback)) {
+            $progressCallback([
+                'stage' => 'queues_sync_start',
+                'progress' => 25,
+                'message' => 'Iniciando sincronización de colas por departamento',
+                'details' => [
+                    'departments_total' => $totalDepartments,
+                    'departments_done' => 0,
+                ],
+            ]);
+        }
+
+        $deptIndex = 0;
         foreach ($departments as $dept) {
-            $deptResult = $this->syncDepartmentQueues($dept['id']);
+            $deptIndex++;
+            $deptName = $dept['name'] ?? ('Departamento ' . $dept['id']);
+
+            if (is_callable($progressCallback)) {
+                $baseProgress = 25 + (int) floor((($deptIndex - 1) / max(1, $totalDepartments)) * 55);
+                $progressCallback([
+                    'stage' => 'queues_department_start',
+                    'progress' => $baseProgress,
+                    'message' => "Sincronizando {$deptName} ({$deptIndex}/{$totalDepartments})",
+                    'details' => [
+                        'department_id' => $dept['id'],
+                        'department_name' => $deptName,
+                        'departments_total' => $totalDepartments,
+                        'departments_done' => $deptIndex - 1,
+                    ],
+                ]);
+            }
+
+            $deptResult = $this->syncDepartmentQueues($dept['id'], function (array $progressData) use ($progressCallback, $deptIndex, $totalDepartments) {
+                if (!is_callable($progressCallback)) {
+                    return;
+                }
+
+                $payload = $progressData;
+                if (!isset($payload['progress'])) {
+                    $details = $payload['details'] ?? [];
+                    $processed = isset($details['processed']) ? intval($details['processed']) : null;
+                    $total = isset($details['total']) ? max(1, intval($details['total'])) : null;
+
+                    if ($processed !== null && $total !== null) {
+                        $deptFraction = min(1, max(0, $processed / $total));
+                        $globalFraction = (($deptIndex - 1) + $deptFraction) / max(1, $totalDepartments);
+                        $payload['progress'] = 25 + (int) floor($globalFraction * 55);
+                    } else {
+                        $payload['progress'] = 25 + (int) floor(($deptIndex / max(1, $totalDepartments)) * 55);
+                    }
+                }
+                $progressCallback($payload);
+            });
+
             $queueResults->synced += $deptResult->synced;
             $queueResults->errors = array_merge($queueResults->errors, $deptResult->errors ?? []);
+
+            if (is_callable($progressCallback)) {
+                $progress = 25 + (int) floor(($deptIndex / max(1, $totalDepartments)) * 55);
+                $progressCallback([
+                    'stage' => 'queues_department_done',
+                    'progress' => $progress,
+                    'message' => "{$deptName} completado: {$deptResult->message}",
+                    'last_error' => !empty($deptResult->errors) ? ($deptResult->errors[0]['error'] ?? null) : null,
+                    'details' => [
+                        'department_id' => $dept['id'],
+                        'department_name' => $deptName,
+                        'departments_total' => $totalDepartments,
+                        'departments_done' => $deptIndex,
+                        'synced' => $queueResults->synced,
+                        'errors' => count($queueResults->errors),
+                    ],
+                ]);
+            }
         }
         $res->results['queues'] = $queueResults;
 
         // 2. Read QoS status (read-only, no modifications)
+        if (is_callable($progressCallback)) {
+            $progressCallback([
+                'stage' => 'qos_read',
+                'progress' => 85,
+                'message' => 'Leyendo estado de Queue Trees (QoS)',
+            ]);
+        }
         $res->results['qos_status'] = $this->getQoSStatus();
 
         // 3. Sync content filtering
@@ -460,7 +643,22 @@ class MuniSyncService extends BaseService
                 'message' => 'Filtrado omitido en syncAll para router legacy (use sincronización de filtrado dedicada).',
             ];
         } else {
+            if (is_callable($progressCallback)) {
+                $progressCallback([
+                    'stage' => 'filtering_sync',
+                    'progress' => 92,
+                    'message' => 'Sincronizando filtrado de contenido',
+                ]);
+            }
             $res->results['filtering'] = $this->syncContentFiltering();
+        }
+
+        if (is_callable($progressCallback)) {
+            $progressCallback([
+                'stage' => 'finalizing',
+                'progress' => 98,
+                'message' => 'Finalizando y guardando resultados',
+            ]);
         }
 
         $res->success = true;

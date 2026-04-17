@@ -8,6 +8,7 @@
 
     let selectedRouterId = null;
     let routerConnected = false;
+    let activeSyncPollTimer = null;
     
     document.addEventListener('DOMContentLoaded', function () {
         // Hide legacy page loader overlay once dashboard JS initializes
@@ -808,6 +809,12 @@
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
+                // Safety: ensure previous polling loop is always terminated
+                if (activeSyncPollTimer) {
+                    clearInterval(activeSyncPollTimer);
+                    activeSyncPollTimer = null;
+                }
+
                 // Level 3 — full sync animated loader
                 const loader = MuniLoader.sync(
                     'Sincronizando con el router MikroTik',
@@ -827,15 +834,37 @@
 
                 let pollTimer = null;
                 let pollInFlight = false;
-                const pollStartedAt = Date.now();
                 const POLL_INTERVAL_MS = 2000;
-                const POLL_MAX_MS = 20 * 60 * 1000; // 20 minutes
+                let lastProgress = 0;
+                let lastStage = '';
+                let lastProgressChangeAt = Date.now();
 
                 const stopPolling = () => {
                     if (pollTimer) {
                         clearInterval(pollTimer);
                         pollTimer = null;
                     }
+                    if (activeSyncPollTimer) {
+                        clearInterval(activeSyncPollTimer);
+                        activeSyncPollTimer = null;
+                    }
+                    pollInFlight = false;
+                };
+
+                const buildStatusMessage = (res, data) => {
+                    const base = res.msg || 'Sin mensaje del servidor';
+                    const d = (data && typeof data === 'object') ? data.details : null;
+                    const user = d && d.current_user_name ? `${d.current_user_name}${d.current_user_ip ? ' (' + d.current_user_ip + ')' : ''}` : '';
+                    const dept = d && d.department_name ? d.department_name : '';
+                    const processed = (d && typeof d.processed === 'number' && typeof d.total === 'number') ? `${d.processed}/${d.total}` : '';
+
+                    const extra = [
+                        dept ? `Depto: ${dept}` : '',
+                        user ? `Usuario: ${user}` : '',
+                        processed ? `Progreso depto: ${processed}` : '',
+                    ].filter(Boolean).join(' · ');
+
+                    return extra ? `${base}\n${extra}` : base;
                 };
 
                 const handleFinalState = (statusData) => {
@@ -844,6 +873,8 @@
 
                     const state = statusData.status || 'error';
                     const msg = statusData.msg || 'Sin mensaje del servidor';
+                    const data = statusData.data || {};
+                    const detailError = data.last_error ? `\nDetalle: ${data.last_error}` : '';
 
                     if (state === 'success' || state === 'warning') {
                         loader.done(
@@ -855,7 +886,7 @@
                         return;
                     }
 
-                    loader.fail(msg);
+                    loader.fail(msg + detailError);
                 };
 
                 const pollJobStatus = (jobId) => {
@@ -887,14 +918,24 @@
 
                                 if (state === 'pending' || state === 'accepted' || state === 'running') {
                                     const backendProgress = parseInt(data.progress || 0, 10);
-                                    const uiProgress = Math.max(backendProgress, 95);
-                                    loader.setPercent(uiProgress, res.msg || 'Sincronización en progreso en segundo plano...');
+                                    const uiProgress = Math.max(backendProgress, 10);
+                                    loader.setPercent(uiProgress, buildStatusMessage(res, data));
 
-                                    if ((Date.now() - pollStartedAt) > POLL_MAX_MS) {
+                                    const stage = (data.stage || '') + '|' + (res.msg || '');
+                                    if (backendProgress !== lastProgress || stage !== lastStage) {
+                                        lastProgress = backendProgress;
+                                        lastStage = stage;
+                                        lastProgressChangeAt = Date.now();
+                                    }
+
+                                    if ((Date.now() - lastProgressChangeAt) > (3 * 60 * 1000)) {
                                         stopPolling();
                                         clearStepTimers();
-                                        loader.fail('La sincronización en segundo plano tardó demasiado. Revise estado del router y vuelva a intentar.');
+                                        const reason = data.last_error ? ('\nDetalle: ' + data.last_error) : '';
+                                        loader.fail('La sincronización quedó sin avance durante varios minutos. Se detuvo el monitoreo para evitar bucle infinito.' + reason);
+                                        return;
                                     }
+
                                     return;
                                 }
 
@@ -902,15 +943,10 @@
                             },
                             error: function () {
                                 pollInFlight = false;
-
-                                if ((Date.now() - pollStartedAt) > POLL_MAX_MS) {
-                                    stopPolling();
-                                    clearStepTimers();
-                                    loader.fail('No se pudo confirmar el estado final de la sincronización.');
-                                }
                             }
                         });
                     }, POLL_INTERVAL_MS);
+                    activeSyncPollTimer = pollTimer;
                 };
 
                 $.ajax({
@@ -940,7 +976,7 @@
                             return;
                         }
 
-                        loader.setPercent(96, 'Sincronización ejecutándose en segundo plano...');
+                        loader.setPercent(15, 'Sincronización ejecutándose en segundo plano...');
                         pollJobStatus(res.job_id);
                     },
                     error: function (xhr, textStatus) {
