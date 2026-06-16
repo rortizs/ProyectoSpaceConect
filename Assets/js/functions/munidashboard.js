@@ -129,12 +129,149 @@
     $('#selectRouter').on('change', function () {
         selectedRouterId = $(this).val();
         if (selectedRouterId) {
+            loadManagementKpis();
             loadBandwidthStats();
             loadAlerts();
             checkRouterStatus();
+        } else {
+            renderManagementKpiFallback('Seleccione un router para ver los indicadores de gestión.');
         }
     });
-    
+
+    function loadManagementKpis() {
+        setManagementKpiStatus('loading', 'Cargando');
+        $('#managementKpiFallback').hide().text('');
+
+        $.ajax({
+            url: base_url + '/munidashboard/getManagementKpis',
+            method: 'POST',
+            data: { router_id: selectedRouterId },
+            timeout: 12000,
+            success: function (response) {
+                let res = null;
+                try {
+                    res = (typeof response === 'string') ? JSON.parse(response) : response;
+                } catch (e) {
+                    renderManagementKpiFallback('No se pudo leer la respuesta de indicadores de gestión.');
+                    return;
+                }
+
+                if (!res || res.status !== 'success' || !res.data) {
+                    renderManagementKpiFallback((res && res.msg) || 'No se pudieron cargar los indicadores de gestión.');
+                    return;
+                }
+
+                renderManagementKpis(res.data);
+            },
+            error: function (xhr, textStatus) {
+                if (textStatus === 'timeout') {
+                    renderManagementKpiFallback('El router no respondió a tiempo. Se muestran solo datos técnicos disponibles cuando existan.');
+                    return;
+                }
+
+                renderManagementKpiFallback('No se pudieron cargar los indicadores de gestión en este momento.');
+            }
+        });
+    }
+
+    function renderManagementKpis(data) {
+        const kpis = data.kpis || {};
+        const routerState = data.source && data.source.router ? data.source.router : 'unavailable';
+
+        setKpiValue('assigned_service', kpis.assigned_service);
+        setKpiValue('observed_consumption', kpis.observed_consumption);
+        setKpiValue('departments_attention', kpis.departments_attention);
+        setKpiValue('ip_compliance', kpis.ip_compliance);
+        setKpiValue('queue_sync_compliance', kpis.queue_sync_compliance);
+        renderDepartmentEvidence(data.departments || []);
+
+        if (routerState === 'available') {
+            setManagementKpiStatus('ok', 'Datos actuales');
+            $('#managementKpiFallback').hide().text('');
+            return;
+        }
+
+        setManagementKpiStatus('warning', 'Router sin lectura actual');
+        $('#managementKpiFallback')
+            .text('Lectura del router no disponible: los indicadores de catálogo siguen visibles y el consumo actual usa “Sin información suficiente”.')
+            .show();
+    }
+
+    function setKpiValue(key, kpi) {
+        const value = getKpiDisplayValue(kpi);
+        const card = $('[data-kpi="' + key + '"]');
+
+        card.find('.muni-kpi-card__value').text(value);
+        card.toggleClass('muni-kpi-card--muted', value === 'Sin información suficiente');
+
+        if (kpi && kpi.evidence === 'current_only') {
+            card.find('.muni-kpi-card__meta').text('Consumo actual, sin historial');
+        }
+    }
+
+    function getKpiDisplayValue(kpi) {
+        if (!kpi) return '--';
+        if (kpi.value !== undefined && kpi.value !== null && kpi.value !== '') return kpi.value;
+        if (kpi.percent !== undefined && kpi.percent !== null) return kpi.percent + '%';
+        return '--';
+    }
+
+    function renderManagementKpiFallback(message) {
+        setManagementKpiStatus('warning', 'Sin información suficiente');
+        $('#managementKpiFallback').text(message).show();
+        $('#managementKpiCards .muni-kpi-card__value').text('--');
+        renderDepartmentEvidence([]);
+    }
+
+    function renderDepartmentEvidence(departments) {
+        const container = $('#departmentEvidenceList');
+        container.empty();
+
+        if (!departments || departments.length === 0) {
+            container.html(
+                '<div class="muni-empty-state">' +
+                '<div class="muni-empty-state__text">Sin áreas priorizadas para revisión administrativa con la evidencia actual.</div>' +
+                '</div>'
+            );
+            return;
+        }
+
+        departments.forEach(function (department) {
+            const status = department.status || 'Revisión administrativa';
+            const reasons = department.reasons || [];
+            const reasonsHtml = reasons.length > 0 ? reasons.map(function (reason) {
+                const evidenceLabel = reason.evidence === 'current_only' ? 'Lectura momentánea' : 'Catálogo municipal';
+                const affected = reason.affected_users > 1 ? ' · ' + reason.affected_users + ' registros' : '';
+
+                return '<li class="muni-department-evidence__reason">' +
+                    '<strong>' + escapeHtml(reason.label || 'Revisión administrativa') + '</strong>' +
+                    '<span>' + escapeHtml(evidenceLabel + affected) + '</span>' +
+                    '<p>' + escapeHtml(reason.copy || 'Revisar la evidencia disponible antes de tomar una decisión administrativa.') + '</p>' +
+                    '</li>';
+            }).join('') : '<li class="muni-department-evidence__reason">Sin motivos adicionales.</li>';
+
+            container.append(
+                '<article class="muni-department-evidence__item" role="listitem">' +
+                '<div class="muni-department-evidence__item-header">' +
+                '<div>' +
+                '<h4>' + escapeHtml(department.name || 'Sin área asignada') + '</h4>' +
+                '<span>Revisión administrativa</span>' +
+                '</div>' +
+                '<span class="muni-department-evidence__status">' + escapeHtml(status) + '</span>' +
+                '</div>' +
+                '<ul>' + reasonsHtml + '</ul>' +
+                '</article>'
+            );
+        });
+    }
+
+    function setManagementKpiStatus(type, text) {
+        $('#managementKpiStatus')
+            .removeClass('muni-kpi-status--loading muni-kpi-status--ok muni-kpi-status--warning')
+            .addClass('muni-kpi-status--' + type)
+            .text(text);
+    }
+     
     function loadBandwidthStats() {
         $.post(base_url + '/munidashboard/getBandwidthStats', { router_id: selectedRouterId }, function (response) {
             let res = JSON.parse(response);
@@ -526,7 +663,7 @@
                     <!-- History Table -->
                     <div>
                         <h4 style="margin: 0 0 12px 0; font-size: 1rem; font-weight: 600; color: #0a0f1a;">
-                            <i class="fas fa-history"></i> Histórico de Consumo (Últimos 7 días)
+                            <i class="fas fa-history"></i> Lecturas disponibles de consumo
                         </h4>
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
@@ -566,8 +703,8 @@
                     <hr style="margin: 16px 0; border: 1px solid #e2e8f0;">
                     <p style="color: #718096; font-size: 0.875rem;">
                         <i class="fas fa-info-circle"></i> 
-                        El historial detallado de consumo se está implementando. 
-                        Próximamente disponible con gráficas de tendencia.
+                        El detalle persistido de consumo se está implementando.
+                        Próximamente disponible con evidencia registrada.
                     </p>
                 </div>
             `,

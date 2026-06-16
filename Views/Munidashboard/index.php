@@ -43,6 +43,67 @@
             </div>
         </div>
 
+        <!-- Management KPI Summary -->
+        <section class="muni-kpi-panel" id="managementKpiSection" aria-labelledby="managementKpiTitle">
+            <div class="muni-kpi-panel__header">
+                <div>
+                    <h2 class="muni-kpi-panel__title" id="managementKpiTitle">
+                        <i class="fas fa-clipboard-check"></i> Indicadores de gestión municipal
+                    </h2>
+                    <p class="muni-kpi-panel__note">
+                        Datos actuales del catálogo municipal y lecturas momentáneas del router cuando están disponibles. No representan conclusiones históricas.
+                    </p>
+                </div>
+                <span class="muni-kpi-status muni-kpi-status--loading" id="managementKpiStatus">Cargando</span>
+            </div>
+
+            <div class="muni-kpi-fallback" id="managementKpiFallback" style="display:none;" role="status"></div>
+
+            <div class="muni-kpi-grid" id="managementKpiCards">
+                <article class="muni-kpi-card" data-kpi="assigned_service">
+                    <div class="muni-kpi-card__label">Personal con servicio asignado</div>
+                    <div class="muni-kpi-card__value" id="kpiAssignedService">--</div>
+                    <div class="muni-kpi-card__meta">Catálogo municipal</div>
+                </article>
+                <article class="muni-kpi-card" data-kpi="observed_consumption">
+                    <div class="muni-kpi-card__label">Usuarios con consumo en observación</div>
+                    <div class="muni-kpi-card__value" id="kpiObservedConsumption">--</div>
+                    <div class="muni-kpi-card__meta">Consumo actual del router</div>
+                </article>
+                <article class="muni-kpi-card" data-kpi="departments_attention">
+                    <div class="muni-kpi-card__label">Áreas que requieren atención</div>
+                    <div class="muni-kpi-card__value" id="kpiDepartmentsAttention">--</div>
+                    <div class="muni-kpi-card__meta">Revisión administrativa</div>
+                </article>
+                <article class="muni-kpi-card" data-kpi="ip_compliance">
+                    <div class="muni-kpi-card__label">Cumplimiento de IP asignada</div>
+                    <div class="muni-kpi-card__value" id="kpiIpCompliance">--</div>
+                    <div class="muni-kpi-card__meta">IP registrada vs rango</div>
+                </article>
+                <article class="muni-kpi-card" data-kpi="queue_sync_compliance">
+                    <div class="muni-kpi-card__label">Configuración aplicada correctamente</div>
+                    <div class="muni-kpi-card__value" id="kpiQueueSyncCompliance">--</div>
+                    <div class="muni-kpi-card__meta">Queue sincronizada</div>
+                </article>
+            </div>
+
+            <div class="muni-department-evidence" id="departmentEvidenceSection" aria-labelledby="departmentEvidenceTitle">
+                <div class="muni-department-evidence__header">
+                    <h3 class="muni-department-evidence__title" id="departmentEvidenceTitle">
+                        <i class="fas fa-list-check"></i> Evidencia por área
+                    </h3>
+                    <p class="muni-department-evidence__note">
+                        Motivos para revisión administrativa; no constituyen sanción ni conclusión de uso indebido.
+                    </p>
+                </div>
+                <div class="muni-department-evidence__list" id="departmentEvidenceList" role="list">
+                    <div class="muni-empty-state">
+                        <div class="muni-empty-state__text">Cargando evidencia por área...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Stats Cards - Redesigned -->
         <div class="muni-stats-grid" id="statsCards">
             <div class="muni-stat-card muni-stat-card--ok">
