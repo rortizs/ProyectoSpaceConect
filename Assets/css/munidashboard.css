@@ -332,6 +332,124 @@
 }
 
 /* ===========================
+   MANAGEMENT KPI PANEL
+   =========================== */
+
+#managementKpiSection {
+  margin-bottom: var(--space-6);
+}
+
+.muni-kpi-panel {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-base);
+  padding: var(--space-6);
+}
+
+.muni-kpi-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.muni-kpi-panel__title {
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0 0 var(--space-2);
+}
+
+.muni-kpi-panel__note {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 760px;
+}
+
+.muni-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+
+.muni-kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--infra-primary);
+  border-radius: 8px;
+  min-height: 116px;
+  padding: var(--space-4);
+}
+
+.muni-kpi-card--muted {
+  border-left-color: var(--status-warning);
+  background: #fffbeb;
+}
+
+.muni-kpi-card__label {
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  min-height: 32px;
+  text-transform: uppercase;
+}
+
+.muni-kpi-card__value {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: var(--space-2) 0;
+}
+
+.muni-kpi-card__meta {
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
+.muni-kpi-status {
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.muni-kpi-status--loading {
+  background: var(--infra-bg);
+  color: var(--infra-primary);
+}
+
+.muni-kpi-status--ok {
+  background: var(--status-ok-bg);
+  color: var(--status-ok);
+}
+
+.muni-kpi-status--warning {
+  background: var(--status-warning-bg);
+  color: #92400e;
+}
+
+.muni-kpi-fallback {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 0.85rem;
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+/* ===========================
    STATS CARDS - Redesigned
    =========================== */
 
@@ -801,6 +919,14 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .muni-kpi-panel__header {
+    flex-direction: column;
+  }
+
+  .muni-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
   .muni-stats-grid {
     grid-template-columns: 1fr;
   }
@@ -816,5 +942,29 @@
   .muni-gauge {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media print {
+  #managementKpiSection,
+  .muni-table-container {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .muni-kpi-panel,
+  .muni-kpi-card {
+    background: #fff !important;
+    border-color: #94a3b8;
+  }
+
+  .muni-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .muni-action-btn,
+  .btn,
+  #quickBlockDomain {
+    display: none !important;
   }
 }

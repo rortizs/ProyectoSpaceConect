@@ -129,12 +129,105 @@
     $('#selectRouter').on('change', function () {
         selectedRouterId = $(this).val();
         if (selectedRouterId) {
+            loadManagementKpis();
             loadBandwidthStats();
             loadAlerts();
             checkRouterStatus();
+        } else {
+            renderManagementKpiFallback('Seleccione un router para ver los indicadores de gestión.');
         }
     });
-    
+
+    function loadManagementKpis() {
+        setManagementKpiStatus('loading', 'Cargando');
+        $('#managementKpiFallback').hide().text('');
+
+        $.ajax({
+            url: base_url + '/munidashboard/getManagementKpis',
+            method: 'POST',
+            data: { router_id: selectedRouterId },
+            timeout: 12000,
+            success: function (response) {
+                let res = null;
+                try {
+                    res = (typeof response === 'string') ? JSON.parse(response) : response;
+                } catch (e) {
+                    renderManagementKpiFallback('No se pudo leer la respuesta de indicadores de gestión.');
+                    return;
+                }
+
+                if (!res || res.status !== 'success' || !res.data) {
+                    renderManagementKpiFallback((res && res.msg) || 'No se pudieron cargar los indicadores de gestión.');
+                    return;
+                }
+
+                renderManagementKpis(res.data);
+            },
+            error: function (xhr, textStatus) {
+                if (textStatus === 'timeout') {
+                    renderManagementKpiFallback('El router no respondió a tiempo. Se muestran solo datos técnicos disponibles cuando existan.');
+                    return;
+                }
+
+                renderManagementKpiFallback('No se pudieron cargar los indicadores de gestión en este momento.');
+            }
+        });
+    }
+
+    function renderManagementKpis(data) {
+        const kpis = data.kpis || {};
+        const routerState = data.source && data.source.router ? data.source.router : 'unavailable';
+
+        setKpiValue('assigned_service', kpis.assigned_service);
+        setKpiValue('observed_consumption', kpis.observed_consumption);
+        setKpiValue('departments_attention', kpis.departments_attention);
+        setKpiValue('ip_compliance', kpis.ip_compliance);
+        setKpiValue('queue_sync_compliance', kpis.queue_sync_compliance);
+
+        if (routerState === 'available') {
+            setManagementKpiStatus('ok', 'Datos actuales');
+            $('#managementKpiFallback').hide().text('');
+            return;
+        }
+
+        setManagementKpiStatus('warning', 'Router sin lectura actual');
+        $('#managementKpiFallback')
+            .text('Lectura del router no disponible: los indicadores de catálogo siguen visibles y el consumo actual usa “Sin información suficiente”.')
+            .show();
+    }
+
+    function setKpiValue(key, kpi) {
+        const value = getKpiDisplayValue(kpi);
+        const card = $('[data-kpi="' + key + '"]');
+
+        card.find('.muni-kpi-card__value').text(value);
+        card.toggleClass('muni-kpi-card--muted', value === 'Sin información suficiente');
+
+        if (kpi && kpi.evidence === 'current_only') {
+            card.find('.muni-kpi-card__meta').text('Consumo actual, sin historial');
+        }
+    }
+
+    function getKpiDisplayValue(kpi) {
+        if (!kpi) return '--';
+        if (kpi.value !== undefined && kpi.value !== null && kpi.value !== '') return kpi.value;
+        if (kpi.percent !== undefined && kpi.percent !== null) return kpi.percent + '%';
+        return '--';
+    }
+
+    function renderManagementKpiFallback(message) {
+        setManagementKpiStatus('warning', 'Sin información suficiente');
+        $('#managementKpiFallback').text(message).show();
+        $('#managementKpiCards .muni-kpi-card__value').text('--');
+    }
+
+    function setManagementKpiStatus(type, text) {
+        $('#managementKpiStatus')
+            .removeClass('muni-kpi-status--loading muni-kpi-status--ok muni-kpi-status--warning')
+            .addClass('muni-kpi-status--' + type)
+            .text(text);
+    }
+     
     function loadBandwidthStats() {
         $.post(base_url + '/munidashboard/getBandwidthStats', { router_id: selectedRouterId }, function (response) {
             let res = JSON.parse(response);
