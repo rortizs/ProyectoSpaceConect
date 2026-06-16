@@ -98,6 +98,47 @@ class MunidashboardModelTest extends BaseTestCase
         $this->assertEquals(1, $payload['kpis']['assigned_service']['value']);
     }
 
+    /**
+     * @group critical
+     */
+    public function testMergeManagementKpisWithBandwidthUsesExplicitCurrentRateFieldsOnly(): void
+    {
+        $model = new TestableMunidashboardModel();
+        $payload = $model->buildManagementKpiPayload([], 7);
+
+        $merged = $model->mergeManagementKpisWithBandwidth($payload, [
+            ['user_id' => 1, 'download_rate' => 0, 'upload_rate' => 0, 'disabled' => false],
+            ['user_id' => 2, 'download_rate' => 2048, 'upload_rate' => 512, 'disabled' => false],
+            ['user_id' => 3, 'download_rate' => 4096, 'upload_rate' => 1024, 'disabled' => true],
+        ]);
+
+        $this->assertEquals('available', $merged['source']['router']);
+        $this->assertEquals(1, $merged['kpis']['observed_consumption']['value']);
+        $this->assertEquals('current_only', $merged['kpis']['observed_consumption']['evidence']);
+        $this->assertFalse($merged['metadata']['uses_generated_history']);
+    }
+
+    /**
+     * @group critical
+     */
+    public function testMergeManagementKpisWithBandwidthDoesNotTreatCumulativeBytesAsCurrentConsumption(): void
+    {
+        $model = new TestableMunidashboardModel();
+        $payload = $model->buildManagementKpiPayload([], 7);
+
+        $merged = $model->mergeManagementKpisWithBandwidth($payload, [
+            ['user_id' => 1, 'download_bytes' => 2048, 'upload_bytes' => 512, 'disabled' => false],
+            ['user_id' => 2, 'download_bytes' => 4096, 'upload_bytes' => 1024, 'disabled' => true],
+        ]);
+
+        $this->assertEquals('available', $merged['source']['router']);
+        $this->assertEquals('Sin información suficiente', $merged['kpis']['observed_consumption']['value']);
+        $this->assertEquals('current_only', $merged['kpis']['observed_consumption']['evidence']);
+        $this->assertEquals(null, $merged['metadata']['observed_consumption_queues']);
+        $this->assertEquals('current_rate_unavailable', $merged['metadata']['observed_consumption_unavailable_reason']);
+        $this->assertFalse($merged['metadata']['uses_generated_history']);
+    }
+
     public static function runStandalone(): int
     {
         $failed = 0;

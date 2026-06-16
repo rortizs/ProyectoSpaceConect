@@ -132,6 +132,63 @@ class MunidashboardModel extends Mysql
         ];
     }
 
+    public function mergeManagementKpisWithBandwidth(array $payload, array $queues): array
+    {
+        $observed = 0;
+        $hasCurrentRateEvidence = false;
+
+        foreach ($queues as $queue) {
+            $disabled = filter_var($queue['disabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $rates = $this->extractCurrentRates($queue);
+
+            if ($rates !== null) {
+                $hasCurrentRateEvidence = true;
+            }
+
+            if (!$disabled && $rates !== null && ($rates['download'] > 0 || $rates['upload'] > 0)) {
+                $observed++;
+            }
+        }
+
+        $payload['source']['router'] = 'available';
+        $payload['kpis']['observed_consumption']['evidence'] = 'current_only';
+
+        if ($hasCurrentRateEvidence) {
+            $payload['kpis']['observed_consumption']['value'] = $observed;
+            $payload['metadata']['observed_consumption_queues'] = $observed;
+            unset($payload['metadata']['observed_consumption_unavailable_reason']);
+        } else {
+            $payload['kpis']['observed_consumption']['value'] = 'Sin información suficiente';
+            $payload['metadata']['observed_consumption_queues'] = null;
+            $payload['metadata']['observed_consumption_unavailable_reason'] = 'current_rate_unavailable';
+        }
+
+        $payload['metadata']['uses_generated_history'] = false;
+
+        return $payload;
+    }
+
+    private function extractCurrentRates(array $queue): ?array
+    {
+        if (array_key_exists('download_rate', $queue) || array_key_exists('upload_rate', $queue)) {
+            return [
+                'download' => intval($queue['download_rate'] ?? 0),
+                'upload' => intval($queue['upload_rate'] ?? 0),
+            ];
+        }
+
+        if (array_key_exists('rate', $queue)) {
+            $parts = explode('/', (string) $queue['rate']);
+
+            return [
+                'upload' => intval($parts[0] ?? 0),
+                'download' => intval($parts[1] ?? 0),
+            ];
+        }
+
+        return null;
+    }
+
     protected function fetchManagementUsers(?int $router_id): array
     {
         $sql = "SELECT mu.id, mu.router_id, mu.department_id, mu.name, mu.ip_address,
