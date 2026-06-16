@@ -271,7 +271,7 @@
             .addClass('muni-kpi-status--' + type)
             .text(text);
     }
-     
+
     function loadBandwidthStats() {
         $.post(base_url + '/munidashboard/getBandwidthStats', { router_id: selectedRouterId }, function (response) {
             let res = JSON.parse(response);
