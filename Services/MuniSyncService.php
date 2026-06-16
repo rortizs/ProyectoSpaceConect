@@ -720,6 +720,8 @@ class MuniSyncService extends BaseService
                 $target = $queue['target'] ?? '';
                 $maxLimit = $queue['max-limit'] ?? '0/0';
                 $bytesStr = $queue['bytes'] ?? '0/0';
+                $hasRate = array_key_exists('rate', $queue) && $queue['rate'] !== null && $queue['rate'] !== '';
+                $rateStr = $hasRate ? (string) $queue['rate'] : null;
                 $disabled = isset($queue['disabled']) && ($queue['disabled'] === 'true' || $queue['disabled'] === true);
 
                 // Parse bytes "upload/download" format
@@ -755,6 +757,13 @@ class MuniSyncService extends BaseService
                     'disabled' => $disabled,
                 ];
 
+                if ($hasRate) {
+                    $rateParts = $this->parseQueueRate($rateStr);
+                    $queueData['upload_rate'] = $rateParts['upload'];
+                    $queueData['download_rate'] = $rateParts['download'];
+                    $queueData['rate'] = $rateStr;
+                }
+
                 $res->queues[] = $queueData;
 
                 if ($disabled) {
@@ -787,6 +796,18 @@ class MuniSyncService extends BaseService
     private function parseQueueBytes(string $bytesStr): array
     {
         $parts = explode('/', $bytesStr);
+        return [
+            'upload' => intval($parts[0] ?? 0),
+            'download' => intval($parts[1] ?? 0),
+        ];
+    }
+
+    /**
+     * Parse MikroTik current rate format "upload/download" into integers.
+     */
+    private function parseQueueRate(string $rateStr): array
+    {
+        $parts = explode('/', $rateStr);
         return [
             'upload' => intval($parts[0] ?? 0),
             'download' => intval($parts[1] ?? 0),
