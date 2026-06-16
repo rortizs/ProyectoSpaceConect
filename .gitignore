@@ -1,5 +1,14 @@
-# Archivos específicos solicitados
+# Agent/workspace local configuration
+.claude
 .claude/
+.codex
+.codex/
+.opencode
+.opencode/
+.pi
+.pi/
+
+# Archivos específicos solicitados
 *.node
 *.json
 

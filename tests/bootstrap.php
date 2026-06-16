@@ -77,6 +77,10 @@ error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 try {
     if (class_exists('Mysql')) {
         $testDb = new Mysql();
+        if (!method_exists($testDb, 'conection')) {
+            throw new Exception('Mysql::conection() is not available; running tests in mock mode');
+        }
+
         if (!$testDb->conection()) {
             throw new Exception('Failed to connect to test database');
         }
