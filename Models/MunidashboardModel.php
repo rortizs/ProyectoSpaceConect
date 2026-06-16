@@ -54,21 +54,22 @@ class MunidashboardModel extends Mysql
         $ipCompliant = 0;
         $insufficientIpEvidence = 0;
         $syncedQueues = 0;
-        $departmentsAttention = [];
+        $departmentSummaries = [];
 
         foreach ($activeUsers as $user) {
             $departmentKey = $this->departmentKey($user);
+            $this->ensureDepartmentSummary($departmentSummaries, $departmentKey, $user);
             $hasService = $this->hasServiceAssignment($user);
             if ($hasService) {
                 $assignedService++;
             } else {
-                $departmentsAttention[$departmentKey] = true;
+                $this->addDepartmentReason($departmentSummaries, $departmentKey, 'service_incomplete');
             }
 
             if (($user['queue_sync_status'] ?? '') === 'synced') {
                 $syncedQueues++;
             } else {
-                $departmentsAttention[$departmentKey] = true;
+                $this->addDepartmentReason($departmentSummaries, $departmentKey, 'queue_not_synced');
             }
 
             $ipStatus = $this->resolveIpCompliance($user['ip_address'] ?? '', $user['ip_range'] ?? '');
@@ -77,14 +78,17 @@ class MunidashboardModel extends Mysql
                 $ipCompliant++;
             } elseif ($ipStatus === 'mismatch') {
                 $ipEvaluable++;
-                $departmentsAttention[$departmentKey] = true;
+                $this->addDepartmentReason($departmentSummaries, $departmentKey, 'ip_out_of_range');
             } else {
                 $insufficientIpEvidence++;
+                $this->addDepartmentReason($departmentSummaries, $departmentKey, 'insufficient_ip_evidence');
             }
         }
 
         $ipPercent = $this->percentage($ipCompliant, $ipEvaluable);
         $queuePercent = $this->percentage($syncedQueues, $activeCount);
+        $departments = $this->finalizeDepartmentSummaries($departmentSummaries);
+        $departmentsAttentionCount = $this->countDepartmentsRequiringAttention($departments);
 
         return [
             'router_id' => $router_id,
@@ -104,7 +108,7 @@ class MunidashboardModel extends Mysql
                     'evidence' => 'current_only',
                 ],
                 'departments_attention' => [
-                    'value' => count($departmentsAttention),
+                    'value' => $departmentsAttentionCount,
                     'label' => 'Áreas que requieren atención',
                     'evidence' => 'catalog',
                 ],
@@ -121,12 +125,16 @@ class MunidashboardModel extends Mysql
                     'evidence' => 'catalog',
                 ],
             ],
-            'departments' => [],
+            'departments' => $departments,
             'messages' => [],
             'metadata' => [
                 'active_users' => $activeCount,
                 'ip_evaluable_users' => $ipEvaluable,
                 'insufficient_ip_evidence' => $insufficientIpEvidence,
+                'insufficient_department_evidence' => count(array_filter(
+                    $departments,
+                    fn($department) => ($department['status'] ?? '') === 'Sin información suficiente'
+                )),
                 'uses_generated_history' => false,
             ],
         ];
@@ -147,6 +155,7 @@ class MunidashboardModel extends Mysql
 
             if (!$disabled && $rates !== null && ($rates['download'] > 0 || $rates['upload'] > 0)) {
                 $observed++;
+                $this->addCurrentConsumptionDepartmentEvidence($payload, $queue);
             }
         }
 
@@ -164,8 +173,184 @@ class MunidashboardModel extends Mysql
         }
 
         $payload['metadata']['uses_generated_history'] = false;
+        $payload['departments'] = $this->finalizeDepartmentSummaries($payload['departments'] ?? []);
+        $payload['kpis']['departments_attention']['value'] = $this->countDepartmentsRequiringAttention($payload['departments']);
 
         return $payload;
+    }
+
+    private function ensureDepartmentSummary(array &$departments, string $departmentKey, array $user): void
+    {
+        if (isset($departments[$departmentKey])) {
+            $departments[$departmentKey]['total_users']++;
+            return;
+        }
+
+        $departments[$departmentKey] = [
+            'key' => $departmentKey,
+            'id' => isset($user['department_id']) ? (int) $user['department_id'] : null,
+            'name' => !empty($user['department_name']) ? $user['department_name'] : 'Sin área asignada',
+            'status' => 'Sin observaciones',
+            'attention_score' => 0,
+            'insufficient_evidence_count' => 0,
+            'total_users' => 1,
+            'reasons' => [],
+        ];
+    }
+
+    private function addDepartmentReason(array &$departments, string $departmentKey, string $code): void
+    {
+        if (!isset($departments[$departmentKey])) {
+            $departments[$departmentKey] = [
+                'key' => $departmentKey,
+                'id' => null,
+                'name' => 'Sin área asignada',
+                'status' => 'Sin observaciones',
+                'attention_score' => 0,
+                'insufficient_evidence_count' => 0,
+                'total_users' => 0,
+                'reasons' => [],
+            ];
+        }
+
+        $this->addReasonToDepartmentSummary($departments[$departmentKey], $code);
+    }
+
+    private function addReasonToDepartmentSummary(array &$department, string $code): void
+    {
+        $definition = $this->departmentReasonDefinitions()[$code];
+
+        foreach ($department['reasons'] as &$reason) {
+            if (($reason['code'] ?? '') === $code) {
+                $reason['affected_users']++;
+                break;
+            }
+        }
+        unset($reason);
+
+        if (!in_array($code, array_column($department['reasons'], 'code'), true)) {
+            $department['reasons'][] = [
+                'code' => $code,
+                'label' => $definition['label'],
+                'evidence' => $definition['evidence'],
+                'severity' => $definition['severity'],
+                'affected_users' => 1,
+                'copy' => $definition['copy'],
+            ];
+        }
+
+        if ($definition['severity'] === 'attention') {
+            $department['attention_score']++;
+            return;
+        }
+
+        if ($definition['severity'] === 'insufficient') {
+            $department['insufficient_evidence_count']++;
+        }
+    }
+
+    private function departmentReasonDefinitions(): array
+    {
+        return [
+            'service_incomplete' => ['label' => 'Servicio asignado incompleto', 'evidence' => 'catalog', 'severity' => 'attention', 'copy' => 'Revisar datos de servicio asignado antes de tomar una decisión administrativa.'],
+            'ip_out_of_range' => ['label' => 'IP fuera del rango registrado', 'evidence' => 'catalog', 'severity' => 'attention', 'copy' => 'Revisar consistencia entre la IP asignada y el rango del área.'],
+            'queue_not_synced' => ['label' => 'Configuración pendiente de aplicar', 'evidence' => 'catalog', 'severity' => 'attention', 'copy' => 'Revisar sincronización de la configuración técnica con el router.'],
+            'current_consumption_observed' => ['label' => 'Consumo actual en observación', 'evidence' => 'current_only', 'severity' => 'attention', 'copy' => 'Lectura momentánea del router; requiere revisión operativa, no prueba comportamiento previo.'],
+            'insufficient_ip_evidence' => ['label' => 'Evidencia de IP insuficiente', 'evidence' => 'catalog', 'severity' => 'insufficient', 'copy' => 'Sin información suficiente para confirmar la consistencia de IP; requiere revisión de catálogo.'],
+        ];
+    }
+
+    private function finalizeDepartmentSummaries(array $departments): array
+    {
+        $finalized = [];
+
+        foreach (array_values($departments) as $department) {
+            if (empty($department['reasons'])) {
+                continue;
+            }
+
+            if (($department['attention_score'] ?? 0) > 0) {
+                $department['status'] = 'Requiere revisión';
+            } elseif (($department['insufficient_evidence_count'] ?? 0) > 0) {
+                $department['status'] = 'Sin información suficiente';
+            } else {
+                $department['status'] = 'Sin observaciones';
+            }
+
+            $department['reasons'] = $this->sortDepartmentReasons($department['reasons'] ?? []);
+
+            $finalized[] = $department;
+        }
+
+        usort($finalized, function (array $a, array $b): int {
+            $score = ($b['attention_score'] ?? 0) <=> ($a['attention_score'] ?? 0);
+            if ($score !== 0) {
+                return $score;
+            }
+
+            $insufficient = ($b['insufficient_evidence_count'] ?? 0) <=> ($a['insufficient_evidence_count'] ?? 0);
+            if ($insufficient !== 0) {
+                return $insufficient;
+            }
+
+            return strcmp($a['name'] ?? '', $b['name'] ?? '');
+        });
+
+        return $finalized;
+    }
+
+    private function sortDepartmentReasons(array $reasons): array
+    {
+        $priority = [
+            'service_incomplete' => 10,
+            'ip_out_of_range' => 20,
+            'queue_not_synced' => 30,
+            'current_consumption_observed' => 40,
+            'insufficient_ip_evidence' => 90,
+        ];
+
+        usort($reasons, function (array $a, array $b) use ($priority): int {
+            return ($priority[$a['code'] ?? ''] ?? 100) <=> ($priority[$b['code'] ?? ''] ?? 100);
+        });
+
+        return $reasons;
+    }
+
+    private function countDepartmentsRequiringAttention(array $departments): int
+    {
+        return count(array_filter(
+            $departments,
+            fn($department) => ($department['attention_score'] ?? 0) > 0
+        ));
+    }
+
+    private function addCurrentConsumptionDepartmentEvidence(array &$payload, array $queue): void
+    {
+        $departmentName = $queue['department'] ?? 'Sin área asignada';
+        $departmentIndex = null;
+
+        foreach ($payload['departments'] ?? [] as $index => $department) {
+            if (strcasecmp($department['name'] ?? '', $departmentName) === 0) {
+                $departmentIndex = $index;
+                break;
+            }
+        }
+
+        if ($departmentIndex === null) {
+            $payload['departments'][] = [
+                'key' => 'queue-' . preg_replace('/[^a-z0-9]+/i', '-', strtolower($departmentName)),
+                'id' => null,
+                'name' => $departmentName,
+                'status' => 'Sin observaciones',
+                'attention_score' => 0,
+                'insufficient_evidence_count' => 0,
+                'total_users' => 0,
+                'reasons' => [],
+            ];
+            $departmentIndex = array_key_last($payload['departments']);
+        }
+
+        $this->addReasonToDepartmentSummary($payload['departments'][$departmentIndex], 'current_consumption_observed');
     }
 
     private function extractCurrentRates(array $queue): ?array
