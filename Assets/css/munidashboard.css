@@ -449,6 +449,24 @@
   padding: var(--space-3) var(--space-4);
 }
 
+.muni-department-evidence { border-top: 1px solid var(--border); margin-top: var(--space-6); padding-top: var(--space-4); }
+.muni-department-evidence__header,
+.muni-department-evidence__item-header { align-items: flex-start; display: flex; gap: var(--space-3); justify-content: space-between; }
+.muni-department-evidence__header { margin-bottom: var(--space-3); }
+.muni-department-evidence__title { color: var(--ink); font-size: 1rem; font-weight: 800; margin: 0; }
+.muni-department-evidence__note { color: var(--ink-muted); font-size: 0.8rem; margin: var(--space-1) 0 0; }
+.muni-department-evidence__list { display: grid; gap: var(--space-3); }
+.muni-department-evidence__item { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--status-warning); border-radius: 8px; padding: var(--space-4); }
+.muni-department-evidence__item-header { margin-bottom: var(--space-3); }
+.muni-department-evidence__item h4 { color: var(--ink); font-size: 0.95rem; font-weight: 800; margin: 0; }
+.muni-department-evidence__item span { color: var(--ink-muted); font-size: 0.75rem; }
+.muni-department-evidence__status { background: var(--status-warning-bg); border-radius: 999px; color: #92400e !important; font-weight: 800; padding: 5px 9px; white-space: nowrap; }
+.muni-department-evidence__item ul { list-style: none; margin: 0; padding: 0; }
+.muni-department-evidence__reason { border-top: 1px solid var(--border); padding: var(--space-3) 0 0; }
+.muni-department-evidence__reason + .muni-department-evidence__reason { margin-top: var(--space-3); }
+.muni-department-evidence__reason strong { color: var(--ink); display: block; font-size: 0.86rem; margin-bottom: var(--space-1); }
+.muni-department-evidence__reason p { color: var(--ink-muted); font-size: 0.82rem; line-height: 1.45; margin: var(--space-1) 0 0; }
+
 /* ===========================
    STATS CARDS - Redesigned
    =========================== */

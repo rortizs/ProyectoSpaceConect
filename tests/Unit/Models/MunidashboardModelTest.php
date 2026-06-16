@@ -139,6 +139,94 @@ class MunidashboardModelTest extends BaseTestCase
         $this->assertFalse($merged['metadata']['uses_generated_history']);
     }
 
+    /**
+     * @group critical
+     */
+    public function testBuildManagementKpiPayloadRanksDepartmentEvidenceWithoutConfirmingInsufficientData(): void
+    {
+        $model = new TestableMunidashboardModel();
+
+        $payload = $model->buildManagementKpiPayload([
+            [
+                'id' => 10,
+                'router_id' => 7,
+                'department_id' => 30,
+                'department_name' => 'Finanzas',
+                'ip_range' => '10.30.0.10-10.30.0.20',
+                'ip_address' => '10.30.0.40',
+                'custom_upload' => '',
+                'custom_download' => '10M',
+                'queue_name' => '',
+                'queue_sync_status' => 'pending',
+                'status' => 1,
+            ],
+            [
+                'id' => 11,
+                'router_id' => 7,
+                'department_id' => 40,
+                'department_name' => 'Archivo',
+                'ip_range' => 'malformed-range',
+                'ip_address' => '10.40.0.15',
+                'custom_upload' => '5M',
+                'custom_download' => '10M',
+                'queue_name' => 'muni-archivo-1',
+                'queue_sync_status' => 'synced',
+                'status' => 1,
+            ],
+        ], 7);
+
+        $this->assertEquals(1, $payload['kpis']['departments_attention']['value']);
+        $this->assertCount(2, $payload['departments']);
+
+        $this->assertEquals('Finanzas', $payload['departments'][0]['name']);
+        $this->assertEquals('Requiere revisión', $payload['departments'][0]['status']);
+        $this->assertEquals(3, $payload['departments'][0]['attention_score']);
+        $this->assertEquals(
+            ['Servicio asignado incompleto', 'IP fuera del rango registrado', 'Configuración pendiente de aplicar'],
+            array_column($payload['departments'][0]['reasons'], 'label')
+        );
+
+        $this->assertEquals('Archivo', $payload['departments'][1]['name']);
+        $this->assertEquals('Sin información suficiente', $payload['departments'][1]['status']);
+        $this->assertEquals(0, $payload['departments'][1]['attention_score']);
+        $this->assertEquals('Evidencia de IP insuficiente', $payload['departments'][1]['reasons'][0]['label']);
+        $this->assertStringNotContainsString('incumplimiento confirmado', strtolower($payload['departments'][1]['reasons'][0]['copy']));
+    }
+
+    /**
+     * @group critical
+     */
+    public function testMergeManagementKpisWithBandwidthAddsCurrentOnlyDepartmentEvidenceCopy(): void
+    {
+        $model = new TestableMunidashboardModel();
+        $payload = $model->buildManagementKpiPayload([
+            [
+                'id' => 12,
+                'router_id' => 7,
+                'department_id' => 30,
+                'department_name' => 'Finanzas',
+                'ip_range' => '10.30.0.10-10.30.0.20',
+                'ip_address' => '10.30.0.12',
+                'custom_upload' => '5M',
+                'custom_download' => '10M',
+                'queue_name' => 'muni-finanzas-12',
+                'queue_sync_status' => 'synced',
+                'status' => 1,
+            ],
+        ], 7);
+
+        $merged = $model->mergeManagementKpisWithBandwidth($payload, [
+            ['user_id' => 12, 'name' => 'Ana Torres', 'department' => 'Finanzas', 'download_rate' => 2048, 'upload_rate' => 0, 'disabled' => false],
+        ]);
+
+        $this->assertEquals(1, $merged['kpis']['departments_attention']['value']);
+        $this->assertEquals('Finanzas', $merged['departments'][0]['name']);
+        $this->assertEquals('Consumo actual en observación', $merged['departments'][0]['reasons'][0]['label']);
+        $this->assertEquals('current_only', $merged['departments'][0]['reasons'][0]['evidence']);
+        $this->assertStringContainsString('lectura momentánea', strtolower($merged['departments'][0]['reasons'][0]['copy']));
+        $this->assertStringNotContainsString('historial', strtolower($merged['departments'][0]['reasons'][0]['copy']));
+    }
+
     public static function runStandalone(): int
     {
         $failed = 0;
