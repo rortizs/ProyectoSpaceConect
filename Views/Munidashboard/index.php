@@ -51,7 +51,7 @@
                         <i class="fas fa-clipboard-check"></i> Indicadores de gestión municipal
                     </h2>
                     <p class="muni-kpi-panel__note">
-                        Datos actuales del catálogo municipal y lecturas momentáneas del router cuando están disponibles. No representan historial ni tendencia semanal.
+                        Datos actuales del catálogo municipal y lecturas momentáneas del router cuando están disponibles. No representan conclusiones históricas.
                     </p>
                 </div>
                 <span class="muni-kpi-status muni-kpi-status--loading" id="managementKpiStatus">Cargando</span>
@@ -85,6 +85,22 @@
                     <div class="muni-kpi-card__value" id="kpiQueueSyncCompliance">--</div>
                     <div class="muni-kpi-card__meta">Queue sincronizada</div>
                 </article>
+            </div>
+
+            <div class="muni-department-evidence" id="departmentEvidenceSection" aria-labelledby="departmentEvidenceTitle">
+                <div class="muni-department-evidence__header">
+                    <h3 class="muni-department-evidence__title" id="departmentEvidenceTitle">
+                        <i class="fas fa-list-check"></i> Evidencia por área
+                    </h3>
+                    <p class="muni-department-evidence__note">
+                        Motivos para revisión administrativa; no constituyen sanción ni conclusión de uso indebido.
+                    </p>
+                </div>
+                <div class="muni-department-evidence__list" id="departmentEvidenceList" role="list">
+                    <div class="muni-empty-state">
+                        <div class="muni-empty-state__text">Cargando evidencia por área...</div>
+                    </div>
+                </div>
             </div>
         </section>
 
