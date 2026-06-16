@@ -118,6 +118,53 @@ class Munidashboard extends Controllers
         die();
     }
 
+    public function getManagementKpis()
+    {
+        if (empty($_SESSION['permits_module']['v'])) {
+            echo json_encode([
+                'status' => 'error',
+                'msg' => 'No tiene permisos para ver estos indicadores.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $router_id = filter_var($_POST['router_id'] ?? null, FILTER_VALIDATE_INT);
+        if ($router_id === false || $router_id === null || $router_id <= 0) {
+            echo json_encode([
+                'status' => 'error',
+                'msg' => 'Seleccione un router.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $payload = $this->model->getManagementKpiSummary((int) $router_id);
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $bandwidth = $this->createMuniSyncService((int) $router_id)->getBandwidthStats();
+        if (!empty($bandwidth->success)) {
+            $payload = $this->model->mergeManagementKpisWithBandwidth($payload, $bandwidth->queues ?? []);
+        } else {
+            $payload['source']['router'] = 'unavailable';
+            $payload['kpis']['observed_consumption']['value'] = 'Sin información suficiente';
+            $payload['kpis']['observed_consumption']['evidence'] = 'current_only';
+            $payload['messages'][] = $bandwidth->message ?? 'No se pudo leer consumo actual del router.';
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'data' => $payload,
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    protected function createMuniSyncService(int $router_id)
+    {
+        require_once('Services/MuniSyncService.php');
+        return new MuniSyncService($router_id);
+    }
+
     public function quickBlock()
     {
         if ($_POST && $_SESSION['permits_module']['a']) {
