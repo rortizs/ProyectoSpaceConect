@@ -130,6 +130,48 @@ if (class_exists('PHPUnit\Framework\TestCase')) {
         {
             // Mock implementation - in real test this would be handled by PHPUnit
         }
+
+        public function assertIsNumeric($value, string $message = ''): void
+        {
+            if (!is_numeric($value)) {
+                throw new Exception($message ?: "Value is not numeric: " . gettype($value));
+            }
+        }
+
+        public function assertIsString($value, string $message = ''): void
+        {
+            if (!is_string($value)) {
+                throw new Exception($message ?: "Value is not string: " . gettype($value));
+            }
+        }
+
+        public function assertIsArray($value, string $message = ''): void
+        {
+            if (!is_array($value)) {
+                throw new Exception($message ?: "Value is not array: " . gettype($value));
+            }
+        }
+
+        public function assertIsObject($value, string $message = ''): void
+        {
+            if (!is_object($value)) {
+                throw new Exception($message ?: "Value is not object: " . gettype($value));
+            }
+        }
+
+        public function assertIsBool($value, string $message = ''): void
+        {
+            if (!is_bool($value)) {
+                throw new Exception($message ?: "Value is not boolean: " . gettype($value));
+            }
+        }
+
+        public function assertIsFloat($value, string $message = ''): void
+        {
+            if (!is_float($value)) {
+                throw new Exception($message ?: "Value is not float: " . gettype($value));
+            }
+        }
     }
 }
 
@@ -299,66 +341,6 @@ trait BaseTestCaseTrait
     {
         if (strpos($haystack, $needle) === false) {
             throw new Exception($message ?: "String '$haystack' does not contain '$needle'");
-        }
-    }
-
-    /**
-     * Assert value is numeric
-     */
-    protected function assertIsNumeric($value, string $message = ''): void
-    {
-        if (!is_numeric($value)) {
-            throw new Exception($message ?: "Value is not numeric: " . gettype($value));
-        }
-    }
-
-    /**
-     * Assert value is string
-     */
-    protected function assertIsString($value, string $message = ''): void
-    {
-        if (!is_string($value)) {
-            throw new Exception($message ?: "Value is not string: " . gettype($value));
-        }
-    }
-
-    /**
-     * Assert value is array
-     */
-    protected function assertIsArray($value, string $message = ''): void
-    {
-        if (!is_array($value)) {
-            throw new Exception($message ?: "Value is not array: " . gettype($value));
-        }
-    }
-
-    /**
-     * Assert value is object
-     */
-    protected function assertIsObject($value, string $message = ''): void
-    {
-        if (!is_object($value)) {
-            throw new Exception($message ?: "Value is not object: " . gettype($value));
-        }
-    }
-
-    /**
-     * Assert value is boolean
-     */
-    protected function assertIsBool($value, string $message = ''): void
-    {
-        if (!is_bool($value)) {
-            throw new Exception($message ?: "Value is not boolean: " . gettype($value));
-        }
-    }
-
-    /**
-     * Assert value is float
-     */
-    protected function assertIsFloat($value, string $message = ''): void
-    {
-        if (!is_float($value)) {
-            throw new Exception($message ?: "Value is not float: " . gettype($value));
         }
     }
 
